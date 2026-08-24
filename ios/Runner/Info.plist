@@ -47,6 +47,12 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Circuit Chat needs camera access to take photos and send them in chats.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Circuit Chat needs photo library access to share photos and videos in chats.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Circuit Chat needs microphone access to record video and voice messages.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

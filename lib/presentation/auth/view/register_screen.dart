@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../app_init/app_init_viewmodel.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -98,7 +99,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       language: _selectedLanguageKey ?? 'en',
     );
     if (success && mounted) {
-      context.go(Routes.home);
+      await ref.read(appInitProvider.notifier).init();
+      if (mounted) context.go(Routes.home);
     }
   }
 

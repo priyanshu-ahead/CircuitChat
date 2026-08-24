@@ -85,7 +85,7 @@ dependencies:
   flutter_svg: ^2.0.13
 
   # ── File Picker (replaces @react-native-documents/picker + react-native-fs) ──
-#  file_picker: ^8.1.6
+  file_picker: ^8.1.6
 
   # ── Path Provider (file system paths, used by file_utils) ──────────────────
   path_provider: ^2.1.4

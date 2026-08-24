@@ -1,14 +1,32 @@
+import 'dart:developer' as dev;
+
 import 'package:socket_io_client/socket_io_client.dart' as io;
+
 import '../constants/app_constants.dart';
 
+/// Socket.io event name constants — mirrors RN's SOCKET_EVENTS constant.
+abstract class SocketEvents {
+  static const newMessage   = 'new_message';
+  static const typing       = 'typing';
+  static const stopTyping   = 'stop_typing';
+  static const online       = 'online';
+  static const offline      = 'offline';
+  static const markRead     = 'mark_read';
+  static const call         = 'call';
+  static const joinChat     = 'join_chat';
+  static const leaveChat    = 'leave_chat';
+  static const messageEdit  = 'message_edit';
+  static const messageDelete = 'message_delete';
+  static const reaction     = 'reaction';
+}
+
 /// socket.io-client wrapper (replaces socket.io-client from RN).
-/// Manages the connection lifecycle and exposes typed event callbacks.
+/// Singleton — call [connect] once after auth, [disconnect] on logout.
 class SocketService {
   SocketService._();
   static final SocketService instance = SocketService._();
 
   io.Socket? _socket;
-
   bool get isConnected => _socket?.connected ?? false;
 
   // ── Connection ────────────────────────────────────────────────────────────
@@ -23,63 +41,56 @@ class SocketService {
           .enableAutoConnect()
           .enableReconnection()
           .setReconnectionDelay(2000)
+          .setReconnectionAttempts(10)
           .setAuth({'token': authToken})
           .build(),
     );
 
     _socket!
-      ..onConnect((_) => _log('Connected'))
-      ..onDisconnect((_) => _log('Disconnected'))
-      ..onError((err) => _log('Error: $err'))
-      ..onConnectError((err) => _log('Connect error: $err'));
+      ..onConnect((_)      => _log('✅ Connected'))
+      ..onDisconnect((_)   => _log('🔌 Disconnected'))
+      ..onError((err)      => _log('❌ Error: $err'))
+      ..onConnectError((e) => _log('❌ Connect error: $e'));
   }
 
   void disconnect() {
     _socket?.disconnect();
+    _socket?.dispose();
     _socket = null;
   }
 
   // ── Emit ──────────────────────────────────────────────────────────────────
 
-  void emit(String event, dynamic data) {
-    _socket?.emit(event, data);
-  }
+  void emit(String event, dynamic data) => _socket?.emit(event, data);
 
-  void emitWithAck(
-    String event,
-    dynamic data, {
-    required void Function(dynamic) ack,
-  }) {
-    _socket?.emitWithAck(event, data, ack: ack);
-  }
+  void emitWithAck(String event, dynamic data,
+      {required void Function(dynamic) ack}) =>
+      _socket?.emitWithAck(event, data, ack: ack);
 
-  // ── Listen ────────────────────────────────────────────────────────────────
+  // ── Subscribe / Unsubscribe ────────────────────────────────────────────────
 
-  void on(String event, void Function(dynamic) handler) {
-    _socket?.on(event, handler);
-  }
+  void on(String event, void Function(dynamic) handler) =>
+      _socket?.on(event, handler);
 
-  void off(String event, [void Function(dynamic)? handler]) {
-    _socket?.off(event, handler);
-  }
+  void off(String event, [void Function(dynamic)? handler]) =>
+      _socket?.off(event, handler);
 
-  // ── Common Chat Events ────────────────────────────────────────────────────
+  // ── Chat room helpers ─────────────────────────────────────────────────────
 
-  /// Join a specific chat room.
-  void joinChat(String chatId) => emit('join_chat', {'chatId': chatId});
+  void joinChat(String chatId) =>
+      emit(SocketEvents.joinChat, {'chatId': chatId});
 
-  /// Leave a specific chat room.
-  void leaveChat(String chatId) => emit('leave_chat', {'chatId': chatId});
+  void leaveChat(String chatId) =>
+      emit(SocketEvents.leaveChat, {'chatId': chatId});
 
-  /// Notify others the user is typing.
-  void sendTyping(String chatId) => emit('typing', {'chatId': chatId});
+  void sendTyping(String chatId) =>
+      emit(SocketEvents.typing, {'chatId': chatId});
 
-  /// Notify others the user stopped typing.
   void sendStopTyping(String chatId) =>
-      emit('stop_typing', {'chatId': chatId});
+      emit(SocketEvents.stopTyping, {'chatId': chatId});
 
-  void _log(String msg) {
-    // ignore: avoid_print
-    print('[SocketService] $msg');
-  }
+  // ── Internal ──────────────────────────────────────────────────────────────
+
+  void _log(String msg) =>
+      dev.log(msg, name: 'SocketService');
 }

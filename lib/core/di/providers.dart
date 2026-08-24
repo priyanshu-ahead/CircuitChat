@@ -29,6 +29,7 @@ import '../../domain/usecases/chat/fetch_messages_usecase.dart';
 import '../../domain/usecases/chat/mark_read_usecase.dart';
 import '../../domain/usecases/chat/send_message_usecase.dart';
 import '../../domain/usecases/user/edit_profile_usecase.dart';
+import '../services/contact_sync_service.dart';
 
 // ── Secure Storage ───────────────────────────────────────────────────────────
 final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
@@ -126,6 +127,11 @@ final groupRepositoryProvider = Provider<GroupRepository>(
 // ── Call repository ───────────────────────────────────────────────────────────
 final callRepositoryProvider = Provider<CallRepository>(
   (ref) => CallRemoteDataSource(ref.read(apiClientProvider)),
+);
+
+// ── Contact sync service ──────────────────────────────────────────────────────
+final contactSyncServiceProvider = Provider<ContactSyncService>(
+  (ref) => ContactSyncService(ref.read(apiClientProvider)),
 );
 
 // ── Domain use cases (chat) ───────────────────────────────────────────────────

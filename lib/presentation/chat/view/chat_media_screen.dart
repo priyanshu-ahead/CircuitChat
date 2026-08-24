@@ -62,7 +62,7 @@ class _ChatMediaNotifier
   }
 
   static String _chatTypeString(ChatType t) =>
-      t == ChatType.group ? '1' : '0';
+      t == ChatType.group ? 'group' : 'user';
 
   Future<void> _loadTab(MediaTab tab, {bool loadMore = false}) async {
     final current = state[tab]!;

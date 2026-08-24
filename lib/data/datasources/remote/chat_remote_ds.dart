@@ -98,12 +98,14 @@ class ChatRemoteDataSource implements ChatRepository {
       _api.post<void>(ApiEndpoints.chatUnarchive, data: {'chat': chatId});
 
   @override
-  Future<void> markRead(String chatId) =>
-      _api.post<void>(ApiEndpoints.chatMarkRead, data: {'chat': chatId});
+  Future<void> markRead(String chatId, String chatType) =>
+      _api.post<void>(ApiEndpoints.chatMarkRead,
+          data: [{'chat': chatId, 'chatType': chatType}]);
 
   @override
-  Future<void> markUnread(String chatId) =>
-      _api.post<void>(ApiEndpoints.chatMarkUnread, data: {'chat': chatId});
+  Future<void> markUnread(String chatId, String chatType) =>
+      _api.post<void>(ApiEndpoints.chatMarkUnread,
+          data: [{'chat': chatId, 'chatType': chatType}]);
 
   @override
   Future<void> muteChat(String chatId, {int? muteUntil}) => _api.post<void>(
@@ -141,9 +143,9 @@ class ChatRemoteDataSource implements ChatRepository {
 
     final raw = await _api.post<Map<String, dynamic>>(
       url,
-      data: {
-        if (params.password != null) 'password': params.password,
-      },
+      data: (params.password != null && params.password!.isNotEmpty)
+          ? {'password': params.password}
+          : <String, dynamic>{},
     );
     final messages = (raw['messages'] as List? ?? [])
         .whereType<Map<String, dynamic>>()
@@ -185,11 +187,12 @@ class ChatRemoteDataSource implements ChatRepository {
     required MessageType type,
     String? text,
   }) async {
+    final filename = localPath.split(RegExp(r'[/\\]')).last;
     final formData = FormData.fromMap({
       'chat': chatId,
       'chatType': chatType,
       'contentType': type.name,
-      'file': await MultipartFile.fromFile(localPath),
+      'file': await MultipartFile.fromFile(localPath, filename: filename),
       if (text != null) 'text': text,
     });
     final raw = await _api.uploadFile<Map<String, dynamic>>(

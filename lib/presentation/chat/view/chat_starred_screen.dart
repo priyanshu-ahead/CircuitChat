@@ -49,21 +49,34 @@ class _StarredNotifier
   late final ChatModel _chat;
 
   String get _chatType =>
-      _chat.type == ChatType.group ? '1' : '0';
+      _chat.type == ChatType.group ? 'group' : 'user';
 
   Future<void> _load() async {
     state = state.copyWith(isLoading: true);
     try {
-      final raw = await ref
-          .read(apiClientProvider)
-          .get<Map<String, dynamic>>(
-        ApiEndpoints.messageStarredList(_chat.id, _chatType),
-      );
-      final msgs =
-          (raw['messages'] as List? ?? raw['data'] as List? ?? [])
-              .whereType<Map<String, dynamic>>()
-              .map((e) => MessageModel.fromJson(e))
-              .toList();
+      List<MessageModel> msgs;
+      if (_chat.id == 'all') {
+        // Aggregate starred messages across all chats via /message/starred
+        final raw = await ref
+            .read(apiClientProvider)
+            .get<Map<String, dynamic>>(
+          '/message/starred',
+        );
+        msgs = (raw['messages'] as List? ?? raw['data'] as List? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map((e) => MessageModel.fromJson(e))
+            .toList();
+      } else {
+        final raw = await ref
+            .read(apiClientProvider)
+            .get<Map<String, dynamic>>(
+          ApiEndpoints.messageStarredList(_chat.id, _chatType),
+        );
+        msgs = (raw['messages'] as List? ?? raw['data'] as List? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map((e) => MessageModel.fromJson(e))
+            .toList();
+      }
       state = state.copyWith(messages: msgs, isLoading: false);
     } catch (_) {
       state = state.copyWith(isLoading: false);

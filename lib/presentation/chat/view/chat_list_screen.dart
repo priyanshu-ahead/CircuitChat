@@ -6,6 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/message_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../presentation/common/widgets/active_users_carousel.dart';
+import '../../../presentation/common/widgets/shimmer_list.dart';
 import '../viewmodel/chat_list_viewmodel.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
@@ -27,6 +30,10 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       ref
           .read(chatListViewModelProvider.notifier)
           .setSearchQuery(_searchCtrl.text);
+    });
+    // Lazy-load: only fetch when this screen actually mounts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chatListViewModelProvider.notifier).loadOnce();
     });
   }
 
@@ -58,7 +65,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () => context.push(Routes.newChat),
         backgroundColor: const Color(0xFF1976D2),
         shape: const CircleBorder(),
         child: const Icon(Icons.edit_rounded, color: Colors.white, size: 22),
@@ -88,7 +95,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               ),
               if (state.archiveCount > 0)
                 TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () => context.push(Routes.archivedChats),
                   icon: const Icon(Icons.archive_outlined,
                       size: 18, color: Color(0xFF1976D2)),
                   label: Text(
@@ -128,12 +135,25 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
           ),
-          const SizedBox(height: 12),
+          // ── Online users strip (mirrors RN ActiveUsers between search & filter tabs)
+          ActiveUsersCarousel(
+            onTap: (UserModel user) {
+              final chat = ChatModel(
+                id:     user.id,
+                type:   ChatType.direct,
+                name:   user.name,
+                avatar: user.avatar,
+              );
+              context.push(Routes.chatDetail, extra: chat);
+            },
+          ),
           // Filter chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
             child: Row(
               children: [
+                const SizedBox(width: 16),
                 _FilterChip(
                   label: 'All',
                   selected: state.filter == ChatFilter.all,
@@ -157,6 +177,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                       .read(chatListViewModelProvider.notifier)
                       .setFilter(ChatFilter.group),
                 ),
+                const SizedBox(width: 16),
               ],
             ),
           ),
@@ -169,8 +190,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   // ── Body ──────────────────────────────────────────────────────────────────
   Widget _buildBody(ChatListState state) {
     if (state.isLoading) {
-      return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF1976D2)));
+      return const ChatListShimmer();
+    }
+
+    if (state.status == ChatListStatus.initial) {
+      return const SizedBox.shrink(); // not yet mounted — show nothing
     }
 
     if (state.status == ChatListStatus.error) {
@@ -302,7 +326,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     );
     if (confirmed == true) {
       final chatType =
-          chat.type == ChatType.group ? '1' : '0';
+          chat.type == ChatType.group ? 'group' : 'user';
       ref
           .read(chatListViewModelProvider.notifier)
           .deleteChat(chat.id, chatType);

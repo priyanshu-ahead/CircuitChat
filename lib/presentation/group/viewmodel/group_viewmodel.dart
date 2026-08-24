@@ -319,12 +319,20 @@ class CallLogState {
 class CallLogViewModel extends Notifier<CallLogState> {
   @override
   CallLogState build() {
-    _loadInitial();
-    return const CallLogState(status: CallLogStatus.loading);
+    // Lazy — screen calls loadOnce() from initState()
+    return const CallLogState(status: CallLogStatus.initial);
   }
 
+  bool _loaded = false;
   CallRepository get _repo => ref.read(callRepositoryProvider);
   String? _lastCall;
+
+  /// Safe to call multiple times — only fetches on the first call.
+  Future<void> loadOnce() async {
+    if (_loaded) return;
+    _loaded = true;
+    await _loadInitial();
+  }
 
   Future<void> _loadInitial({bool refresh = false}) async {
     if (refresh) {

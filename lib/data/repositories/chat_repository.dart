@@ -31,7 +31,7 @@ class FetchMessagesParams {
   });
 
   final String chatId;
-  final String chatType; // '0' = direct, '1' = group
+  final String chatType; // '0' = direct, '1' = group (matches RN CHAT_TYPE constant)
   final String? lastMessage;    // cursor: fetch older than this
   final String? beforeMessage;  // cursor: fetch newer than this
   final int limit;
@@ -69,8 +69,8 @@ abstract interface class ChatRepository {
   Future<void> archiveChat(String chatId);
   Future<void> unarchiveChat(String chatId);
 
-  Future<void> markRead(String chatId);
-  Future<void> markUnread(String chatId);
+  Future<void> markRead(String chatId, String chatType);
+  Future<void> markUnread(String chatId, String chatType);
 
   Future<void> muteChat(String chatId, {int? muteUntil});
   Future<void> unmuteChat(String chatId);

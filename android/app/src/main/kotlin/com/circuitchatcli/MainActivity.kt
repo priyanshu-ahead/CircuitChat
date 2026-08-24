@@ -1,4 +1,4 @@
-package com.example.circuit_chat
+package com.circuitchatcli
 
 import io.flutter.embedding.android.FlutterActivity
 

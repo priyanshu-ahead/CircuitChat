@@ -265,7 +265,7 @@ class CallModel {
   final String? chatId;
   final String? chatName;
   final String? chatAvatar;
-  final String? chatType;   // '0' direct, '1' group
+  final String? chatType;   // 'user' direct, 'group' group
   final String? callType;   // 'audio' | 'video'
   final String? status;     // 'ongoing' | 'ended' | 'rejected' | 'missed'
   final int? duration;      // seconds

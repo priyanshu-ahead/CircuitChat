@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../presentation/common/widgets/legal_page_sheet.dart';
+import '../../app_init/app_init_viewmodel.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -34,7 +36,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       password: _passwordCtrl.text,
     );
     if (success && mounted) {
-      context.go(Routes.home);
+      await ref.read(appInitProvider.notifier).init();
+      if (mounted) context.go(Routes.home);
     }
   }
 
@@ -172,7 +175,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           return null;
                         },
                       ),
-
+                      const SizedBox(height: 8),
                       // ── Forgot Password ───────────────────────────────────
                       Align(
                         alignment: Alignment.centerRight,
@@ -265,11 +268,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _FooterLink(AppStrings.termsOfService, onTap: () {}),
+                  _FooterLink(
+                    AppStrings.termsOfService,
+                    onTap: () => LegalPageSheet.show(
+                      context,
+                      pageKey: 'terms',
+                      title: 'Terms of Service',
+                    ),
+                  ),
                   _dot,
-                  _FooterLink(AppStrings.privacy, onTap: () {}),
+                  _FooterLink(
+                    AppStrings.privacy,
+                    onTap: () => LegalPageSheet.show(
+                      context,
+                      pageKey: 'privacy',
+                      title: 'Privacy Policy',
+                    ),
+                  ),
                   _dot,
-                  _FooterLink(AppStrings.aboutUs, onTap: () {}),
+                  _FooterLink(
+                    AppStrings.aboutUs,
+                    onTap: () => LegalPageSheet.show(
+                      context,
+                      pageKey: 'about',
+                      title: 'About Us',
+                    ),
+                  ),
                 ],
               ),
             ],

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "555056129520",
+    "project_id": "circuit-chat-702cb",
+    "storage_bucket": "circuit-chat-702cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555056129520:android:2ca7bf1d5424eb69d1a935",
+        "android_client_info": {
+          "package_name": "com.circuitchatcli"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOUJHoz52FmE98Mc3ZcoJwsVlnyspikSs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

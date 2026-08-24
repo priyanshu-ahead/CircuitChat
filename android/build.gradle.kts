@@ -7,6 +7,25 @@ allprojects {
     }
 }
 
+// Force all plugin subprojects to compile against SDK 36.
+// This satisfies flutter_plugin_android_lifecycle's requirement when
+// plugins like file_picker are compiled against an older SDK.
+subprojects {
+    afterEvaluate {
+        extensions.findByName("android")?.let { ext ->
+            (ext as? com.android.build.gradle.BaseExtension)?.let { android ->
+                try {
+                    val current = android.compileSdkVersion
+                        ?.removePrefix("android-")?.toIntOrNull() ?: 0
+                    if (current in 1..35) {
+                        android.compileSdkVersion(36)
+                    }
+                } catch (_: Exception) { /* ignore non-android modules */ }
+            }
+        }
+    }
+}
+
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

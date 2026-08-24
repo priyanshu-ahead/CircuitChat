@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
+import '../../../core/services/socket_service.dart';
 import '../../../data/models/chat_model.dart';
+import '../../../data/models/message_model.dart';
 import '../../../data/repositories/chat_repository.dart';
 
 // ── Filter enum ────────────────────────────────────────────────────────────────
@@ -85,11 +87,100 @@ enum ChatListStatus { initial, loading, success, loadingMore, error }
 class ChatListViewModel extends Notifier<ChatListState> {
   @override
   ChatListState build() {
-    _load();
-    return const ChatListState(status: ChatListStatus.loading);
+    // Do NOT auto-load here. The screen calls loadOnce() from initState()
+    // so that IndexedStack doesn't trigger all 4 tabs simultaneously.
+    _subscribeSocket();
+    ref.onDispose(_unsubscribeSocket);
+    return const ChatListState(status: ChatListStatus.initial);
+  }
+
+  bool _loaded = false;
+
+  /// Called by the screen on first mount. Safe to call multiple times —
+  /// only fetches on the first call; subsequent calls are no-ops unless
+  /// [refresh] is true.
+  Future<void> loadOnce() async {
+    if (_loaded) return;
+    _loaded = true;
+    await _load();
   }
 
   ChatRepository get _repo => ref.read(chatRepositoryProvider);
+  SocketService  get _socket => SocketService.instance;
+
+  // ── Socket ────────────────────────────────────────────────────────────────
+
+  void _subscribeSocket() {
+    _socket.on(SocketEvents.newMessage, _onNewMessage);
+    _socket.on(SocketEvents.online,     _onOnline);
+    _socket.on(SocketEvents.offline,    _onOffline);
+    _socket.on(SocketEvents.markRead,   _onMarkRead);
+  }
+
+  void _unsubscribeSocket() {
+    _socket.off(SocketEvents.newMessage);
+    _socket.off(SocketEvents.online);
+    _socket.off(SocketEvents.offline);
+    _socket.off(SocketEvents.markRead);
+  }
+
+  void _onNewMessage(dynamic data) {
+    if (data is! Map) return;
+    final chatId = data['chat']?.toString() ?? data['chatId']?.toString();
+    if (chatId == null) return;
+    // Update last message & increment unread for the relevant chat
+    final msgRaw = data is Map<String, dynamic>
+        ? data : Map<String, dynamic>.from(data as Map);
+    final msg = MessageModel.fromJson(msgRaw);
+    _updateChat(chatId, (c) => c.copyWith(
+      lastMessage: msg,
+      unreadCount: c.unreadCount + 1,
+    ));
+    // Bubble to top (re-sort happens via pinned sort in filtered getter)
+    state = state.copyWith(
+      chats: [
+        ...state.chats.where((c) => c.id == chatId),
+        ...state.chats.where((c) => c.id != chatId),
+      ],
+    );
+  }
+
+  void _onOnline(dynamic data) {
+    if (data is! Map) return;
+    final userId = data['userId']?.toString() ?? data['user']?.toString();
+    if (userId == null) return;
+    state = state.copyWith(
+      chats: state.chats.map((c) {
+        if (c.type == ChatType.direct &&
+            c.members.any((m) => m.id == userId)) {
+          return c.copyWith(isOnline: true);
+        }
+        return c;
+      }).toList(),
+    );
+  }
+
+  void _onOffline(dynamic data) {
+    if (data is! Map) return;
+    final userId = data['userId']?.toString() ?? data['user']?.toString();
+    if (userId == null) return;
+    state = state.copyWith(
+      chats: state.chats.map((c) {
+        if (c.type == ChatType.direct &&
+            c.members.any((m) => m.id == userId)) {
+          return c.copyWith(isOnline: false);
+        }
+        return c;
+      }).toList(),
+    );
+  }
+
+  void _onMarkRead(dynamic data) {
+    if (data is! Map) return;
+    final chatId = data['chatId']?.toString() ?? data['chat']?.toString();
+    if (chatId == null) return;
+    _updateChat(chatId, (c) => c.copyWith(unreadCount: 0));
+  }
 
   // Cursor for pagination (the _id of the last fetched chat's last message).
   String? _lastMessage;
@@ -190,6 +281,12 @@ class ChatListViewModel extends Notifier<ChatListState> {
     }
   }
 
+  Future<void> unarchiveChat(String chatId) async {
+    try {
+      await _repo.unarchiveChat(chatId);
+    } catch (_) {}
+  }
+
   Future<void> deleteChat(String chatId, String chatType) async {
     _removeChat(chatId);
     try {
@@ -201,7 +298,11 @@ class ChatListViewModel extends Notifier<ChatListState> {
 
   Future<void> markRead(String chatId) async {
     _updateChat(chatId, (c) => c.copyWith(unreadCount: 0));
-    await _repo.markRead(chatId);
+    final chatType = state.chats
+        .firstWhere((c) => c.id == chatId,
+            orElse: () => const ChatModel(id: '', type: ChatType.direct))
+        .type == ChatType.group ? '1' : '0';
+    await _repo.markRead(chatId, chatType);
   }
 
   Future<void> muteChat(String chatId) async {

@@ -16,6 +16,8 @@ class CallLogScreen extends ConsumerStatefulWidget {
 class _CallLogScreenState extends ConsumerState<CallLogScreen> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final _searchFocus = FocusNode();
+  bool _searchVisible = false;
 
   @override
   void initState() {
@@ -25,6 +27,9 @@ class _CallLogScreenState extends ConsumerState<CallLogScreen> {
       ref
           .read(callLogViewModelProvider.notifier)
           .setSearch(_searchCtrl.text.trim());
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(callLogViewModelProvider.notifier).loadOnce();
     });
   }
 
@@ -39,7 +44,19 @@ class _CallLogScreenState extends ConsumerState<CallLogScreen> {
   void dispose() {
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
+    _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _toggleSearch() {
+    if (_searchVisible) {
+      _searchCtrl.clear();
+      ref.read(callLogViewModelProvider.notifier).setSearch('');
+      setState(() => _searchVisible = false);
+    } else {
+      setState(() => _searchVisible = true);
+      _searchFocus.requestFocus();
+    }
   }
 
   @override
@@ -57,39 +74,57 @@ class _CallLogScreenState extends ConsumerState<CallLogScreen> {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 22),
         ),
         titleSpacing: 16,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: 'Search calls…',
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: Color(0xFF888888)),
-                suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            color: Color(0xFF888888)),
-                        onPressed: () => _searchCtrl.clear(),
-                      )
-                    : null,
-                filled: true,
-                fillColor: const Color(0xFFF0F0F0),
-                contentPadding: const EdgeInsets.symmetric(
-                    vertical: 8, horizontal: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _searchVisible
+                  ? Icons.close_rounded
+                  : Icons.search_rounded,
+              color: const Color(0xFF1976D2),
             ),
+            tooltip: _searchVisible ? 'Close search' : 'Search',
+            onPressed: _toggleSearch,
           ),
-        ),
+          const SizedBox(width: 4),
+        ],
+        bottom: _searchVisible
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(52),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    focusNode: _searchFocus,
+                    decoration: InputDecoration(
+                      hintText: 'Search calls…',
+                      prefixIcon: const Icon(Icons.search_rounded,
+                          color: Color(0xFF888888)),
+                      suffixIcon: _searchCtrl.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded,
+                                  color: Color(0xFF888888)),
+                              onPressed: () => _searchCtrl.clear(),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: const Color(0xFFF0F0F0),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : null,
       ),
-      body: state.isLoading && state.calls.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : state.calls.isEmpty
+      body: state.status == CallLogStatus.initial
+          ? const SizedBox.shrink() // not yet mounted — show nothing
+          : state.isLoading && state.calls.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : state.calls.isEmpty
               ? const Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
