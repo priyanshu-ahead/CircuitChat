@@ -45,10 +45,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
   String? get _currentUserId => ref.read(authViewModelProvider).user?.id;
 
-  /// '0' = direct, '1' = group — matches RN CHAT_TYPE / SE backend
+  /// 'user' = direct, 'group' = group — matches RN CHAT_TYPE constant
   MessageVmArg get _vmArg => (
         chatId:   widget.chat.id,
-        chatType: widget.chat.type == ChatType.group ? '1' : '0',
+        chatType: widget.chat.type == ChatType.group ? 'group' : 'user',
       );
 
   @override
@@ -108,7 +108,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     try {
       final api    = ref.read(apiClientProvider);
       final chatId = widget.chat.id;
-      final chatType = widget.chat.type == ChatType.group ? '1' : '0';
+      final chatType = widget.chat.type == ChatType.group ? 'group' : 'user';
       // POST /call — mirrors RN handleCallInitiate() in app.js
       final raw = await api.post<Map<String, dynamic>>(
         ApiEndpoints.callInitiate,
@@ -254,7 +254,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       case _ChatOptionAction.markUnread:
         await api.post<void>(ApiEndpoints.chatMarkUnread,
             data: [{'chat': chat.id,
-              'chatType': chat.type == ChatType.group ? '1' : '0'}]);
+              'chatType': chat.type == ChatType.group ? 'group' : 'user'}]);
         break;
       case _ChatOptionAction.block:
         await api.post<void>(ApiEndpoints.friendBlock,
@@ -277,7 +277,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         );
         if (confirmed) {
           await vm.deleteChat(chat.id,
-              chat.type == ChatType.group ? '1' : '0');
+              chat.type == ChatType.group ? 'group' : 'user');
           if (mounted) Navigator.pop(context);
         }
         break;

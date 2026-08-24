@@ -28,17 +28,28 @@ class ActiveUsersCarousel extends ConsumerWidget {
     );
 
     final onlineUsers = chats
-        .where((c) =>
-            c.type == ChatType.direct &&
-            c.isOnline &&
-            c.members.isNotEmpty)
-        .map((c) => UserModel(
+        .where((c) => c.type == ChatType.direct && c.isOnline)
+        .map((c) {
+          // members may be empty depending on API response — fall back to
+          // the chat's own id / name / avatar (which is always populated for
+          // direct chats and represents the other user).
+          if (c.members.isNotEmpty) {
+            return UserModel(
               id:          c.members.first.id,
               username:    c.name ?? c.members.first.username,
               email:       c.members.first.email,
               displayName: c.name ?? c.members.first.displayName,
               avatar:      c.avatar ?? c.members.first.avatar,
-            ))
+            );
+          }
+          return UserModel(
+            id:          c.id,
+            username:    c.name ?? c.id,
+            email:       '',
+            displayName: c.name,
+            avatar:      c.avatar,
+          );
+        })
         .toList();
 
     if (onlineUsers.isEmpty) return const SizedBox.shrink();

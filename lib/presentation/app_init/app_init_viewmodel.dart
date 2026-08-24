@@ -29,12 +29,16 @@ class AppInitState {
   final bool                 isInitialized;
 
   /// Whether Agora calling is enabled on this server.
+  /// The agora settings API returns { enabled: bool, agora: { id: '...' } }.
+  /// Flutter stores those fields merged into generalSettings:
+  ///   generalSettings['agora_enabled'] == true  &&  generalSettings['agora_id'] != ''
   bool get agoraEnabled =>
-      (generalSettings['agora_app_id'] as String? ?? '').isNotEmpty;
+      (generalSettings['agora_id'] as String? ?? '').isNotEmpty;
 
   /// Whether group feature is enabled.
+  /// The group settings API returns { group: { enabled: bool, ... } }.
   bool get groupEnabled =>
-      generalSettings['enable_group'] != false;
+      (generalSettings['group_enabled'] as bool?) ?? true;
 
   /// Get a translated string by key, falls back to the key itself.
   String t(String key) =>
@@ -157,11 +161,15 @@ class AppInitViewModel extends Notifier<AppInitState> {
   }
 
   Future<Map<String, dynamic>> _fetchGeneralSettings(ApiClient api) async {
+    // Valid keys from the server (as per API validation error):
+    // ['setup_complete','one_signal','image_setting','messaging_setting',
+    //  'domain','agora','auto_delete_attachment','group','firebase',
+    //  'chat_app_seo','privacy','about','terms']
     final keys = [
-      'agora_app_id',
-      'enable_group',
+      'agora',          // RN uses GENERAL_SETTING_KEY.agora = 'agora'
+      'group',          // RN uses GENERAL_SETTING_KEY.group = 'group'
       'domain',
-      'firebase_config',
+      'firebase',
       'messaging_setting',
     ];
     final merged = <String, dynamic>{};
@@ -173,8 +181,22 @@ class AppInitViewModel extends Notifier<AppInitState> {
               .catchError((_) => <String, dynamic>{}),
       ];
       final results = await Future.wait(futures);
-      for (final r in results) {
-        merged.addAll(r);
+      for (int i = 0; i < results.length; i++) {
+        final r = results[i];
+        final k = keys[i];
+        // Flatten nested structures to named keys for easy access:
+        //   agora   → { enabled, agora: { id, ... } }  →  agora_enabled, agora_id
+        //   group   → { group: { enabled, ... } }       →  group_enabled
+        if (k == 'agora') {
+          merged['agora_enabled'] = r['enabled'] == true;
+          final agoraObj = r['agora'] as Map<String, dynamic>?;
+          merged['agora_id'] = (agoraObj?['id'] as String? ?? '').trim();
+        } else if (k == 'group') {
+          final groupObj = r['group'] as Map<String, dynamic>?;
+          merged['group_enabled'] = groupObj?['enabled'] == true;
+        } else {
+          merged.addAll(r);
+        }
       }
     } catch (_) {
       // return whatever was merged so far

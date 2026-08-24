@@ -301,7 +301,7 @@ class ChatListViewModel extends Notifier<ChatListState> {
     final chatType = state.chats
         .firstWhere((c) => c.id == chatId,
             orElse: () => const ChatModel(id: '', type: ChatType.direct))
-        .type == ChatType.group ? '1' : '0';
+        .type == ChatType.group ? 'group' : 'user';
     await _repo.markRead(chatId, chatType);
   }
 
