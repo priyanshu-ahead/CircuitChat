@@ -131,15 +131,16 @@ class ChatRemoteDataSource implements ChatRepository {
   @override
   Future<PaginatedResult<MessageModel>> fetchMessages(
       FetchMessagesParams params) async {
-    // Build query string manually — ApiClient.post() doesn't accept queryParameters
+    // SE backend URL uses 'user'/'group' — convert from '0'/'1'
+    final receiverType = params.chatType == '1' ? 'group' : 'user';
     final queryParts = <String>[
       'limit=${params.limit}',
       if (params.lastMessage != null) 'lastMessage=${Uri.encodeComponent(params.lastMessage!)}',
       if (params.beforeMessage != null) 'beforeMessage=${Uri.encodeComponent(params.beforeMessage!)}',
       if (params.search != null) 'search=${Uri.encodeComponent(params.search!)}',
     ];
-    final qs = queryParts.isEmpty ? '' : '?${queryParts.join('&')}';
-    final url = '${ApiEndpoints.messages(params.chatId, params.chatType)}$qs';
+    final qs  = queryParts.isEmpty ? '' : '?${queryParts.join('&')}';
+    final url = '${ApiEndpoints.messages(params.chatId, receiverType)}$qs';
 
     final raw = await _api.post<Map<String, dynamic>>(
       url,
@@ -157,22 +158,24 @@ class ChatRemoteDataSource implements ChatRepository {
   @override
   Future<MessageModel> sendMessage({
     required String chatId,
-    required String chatType,
+    required String chatType,   // '0' = direct → 'user', '1' = group → 'group'
     required String contentType,
     String? text,
     String? mediaId,
     String? replyToId,
     List<String>? mentions,
   }) async {
+    // SE backend expects 'receiver'+'receiverType' with values 'user'/'group'
+    final receiverType = chatType == '1' ? 'group' : 'user';
     final raw = await _api.post<Map<String, dynamic>>(
       ApiEndpoints.sendMessage,
       data: {
-        'chat': chatId,
-        'chatType': chatType,
-        'contentType': contentType,
+        'receiver':     chatId,
+        'receiverType': receiverType,
+        'contentType':  contentType,
         if (text != null) 'text': text,
         if (mediaId != null) 'media': mediaId,
-        if (replyToId != null) 'replyTo': replyToId,
+        if (replyToId != null) 'reply': replyToId,
         if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
       },
     );
@@ -188,16 +191,30 @@ class ChatRemoteDataSource implements ChatRepository {
     String? text,
   }) async {
     final filename = localPath.split(RegExp(r'[/\\]')).last;
-    final formData = FormData.fromMap({
-      'chat': chatId,
-      'chatType': chatType,
-      'contentType': type.name,
+    // RN uses /message/media for upload then /message with receiver+receiverType
+    final receiverType = chatType == '1' ? 'group' : 'user';
+
+    // Step 1: upload the file to /message/media
+    // final filename = localPath.split(RegExp(r'[/\\]')).last;
+    final uploadForm = FormData.fromMap({
       'file': await MultipartFile.fromFile(localPath, filename: filename),
-      if (text != null) 'text': text,
     });
-    final raw = await _api.uploadFile<Map<String, dynamic>>(
+    final uploadRaw = await _api.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.messageMediaUpload,
+      uploadForm,
+    );
+    final mediaId = (uploadRaw['_id'] ?? uploadRaw['id'] ?? '').toString();
+
+    // Step 2: send the message with the uploaded media ID
+    final raw = await _api.post<Map<String, dynamic>>(
       ApiEndpoints.sendMessage,
-      formData,
+      data: {
+        'receiver':     chatId,
+        'receiverType': receiverType,
+        'contentType':  type.name,
+        'media':        mediaId,
+        if (text != null) 'text': text,
+      },
     );
     return MessageModel.fromJson(raw);
   }
