@@ -12,13 +12,22 @@ import '../storage/secure_storage.dart';
 import '../storage/shared_prefs.dart';
 import '../../data/datasources/local/auth_local_ds.dart';
 import '../../data/datasources/remote/auth_remote_ds.dart';
+import '../../data/datasources/remote/chat_remote_ds.dart';
+import '../../data/datasources/remote/group_remote_ds.dart';
 import '../../data/datasources/remote/user_remote_ds.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/chat_repository.dart';
+import '../../data/repositories/group_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../domain/usecases/auth/login_usecase.dart';
 import '../../domain/usecases/auth/logout_usecase.dart';
 import '../../domain/usecases/auth/me_usecase.dart';
 import '../../domain/usecases/auth/register_usecase.dart';
+import '../../domain/usecases/chat/delete_message_usecase.dart';
+import '../../domain/usecases/chat/fetch_chats_usecase.dart';
+import '../../domain/usecases/chat/fetch_messages_usecase.dart';
+import '../../domain/usecases/chat/mark_read_usecase.dart';
+import '../../domain/usecases/chat/send_message_usecase.dart';
 import '../../domain/usecases/user/edit_profile_usecase.dart';
 
 // ── Secure Storage ───────────────────────────────────────────────────────────
@@ -102,4 +111,40 @@ final logoutUseCaseProvider = Provider<LogoutUseCase>(
 // ── Domain use cases (user / profile) ────────────────────────────────────────
 final editProfileUseCaseProvider = Provider<EditProfileUseCase>(
   (ref) => EditProfileUseCase(ref.read(userRepositoryProvider)),
+);
+
+// ── Chat repository ───────────────────────────────────────────────────────────
+final chatRepositoryProvider = Provider<ChatRepository>(
+  (ref) => ChatRemoteDataSource(ref.read(apiClientProvider)),
+);
+
+// ── Group repository ──────────────────────────────────────────────────────────
+final groupRepositoryProvider = Provider<GroupRepository>(
+  (ref) => GroupRemoteDataSource(ref.read(apiClientProvider)),
+);
+
+// ── Call repository ───────────────────────────────────────────────────────────
+final callRepositoryProvider = Provider<CallRepository>(
+  (ref) => CallRemoteDataSource(ref.read(apiClientProvider)),
+);
+
+// ── Domain use cases (chat) ───────────────────────────────────────────────────
+final fetchChatsUseCaseProvider = Provider<FetchChatsUseCase>(
+  (ref) => FetchChatsUseCase(ref.read(chatRepositoryProvider)),
+);
+
+final fetchMessagesUseCaseProvider = Provider<FetchMessagesUseCase>(
+  (ref) => FetchMessagesUseCase(ref.read(chatRepositoryProvider)),
+);
+
+final sendMessageUseCaseProvider = Provider<SendMessageUseCase>(
+  (ref) => SendMessageUseCase(ref.read(chatRepositoryProvider)),
+);
+
+final deleteMessageUseCaseProvider = Provider<DeleteMessageUseCase>(
+  (ref) => DeleteMessageUseCase(ref.read(chatRepositoryProvider)),
+);
+
+final markReadUseCaseProvider = Provider<MarkReadUseCase>(
+  (ref) => MarkReadUseCase(ref.read(chatRepositoryProvider)),
 );

@@ -1,52 +1,123 @@
 import '../models/chat_model.dart';
 import '../models/message_model.dart';
 
-/// Abstract interface for chat data operations.
-abstract interface class ChatRepository {
-  /// Fetch paginated list of chats for the logged-in user.
-  Future<List<ChatModel>> getChats({int page = 1, int limit = 20});
+/// Fetch params for the chat list — mirrors RN's fetchChats() params.
+class FetchChatsParams {
+  const FetchChatsParams({
+    this.archive = false,
+    this.unread = false,
+    this.group = false,
+    this.lastMessage,
+    this.limit = 20,
+  });
 
-  /// Fetch a single chat by [chatId].
+  final bool archive;
+  final bool unread;
+  final bool group;
+  final String? lastMessage; // cursor for pagination
+  final int limit;
+}
+
+/// Fetch params for a message list — mirrors RN's fetchMessages() params.
+class FetchMessagesParams {
+  const FetchMessagesParams({
+    required this.chatId,
+    required this.chatType,
+    this.lastMessage,
+    this.beforeMessage,
+    this.limit = 30,
+    this.password,
+    this.search,
+  });
+
+  final String chatId;
+  final String chatType; // '0' = direct, '1' = group
+  final String? lastMessage;    // cursor: fetch older than this
+  final String? beforeMessage;  // cursor: fetch newer than this
+  final int limit;
+  final String? password;       // password-locked groups
+  final String? search;
+}
+
+/// Result wrapper returned by list calls.
+class PaginatedResult<T> {
+  const PaginatedResult({required this.items, required this.hasMore});
+  final List<T> items;
+  final bool hasMore;
+}
+
+/// Abstract interface for all chat & message data operations.
+/// Matches the full surface of RN's services/chat.js + services/message.js.
+abstract interface class ChatRepository {
+  // ── Chat list ─────────────────────────────────────────────────────────────
+
+  Future<PaginatedResult<ChatModel>> fetchChats(FetchChatsParams params);
+
   Future<ChatModel> getChatById(String chatId);
 
-  /// Fetch paginated messages for [chatId].
-  Future<List<MessageModel>> getMessages(
-    String chatId, {
-    int page = 1,
-    int limit = 30,
-  });
+  Future<PaginatedResult<ChatModel>> searchChats(String query);
 
-  /// Send a text message.
-  Future<MessageModel> sendTextMessage({
+  Future<List<ChatModel>> getNewChatUsers(String query);
+
+  Future<int> getArchiveCount();
+
+  // ── Chat actions ──────────────────────────────────────────────────────────
+
+  Future<void> pinChat(String chatId);
+  Future<void> unpinChat(String chatId);
+
+  Future<void> archiveChat(String chatId);
+  Future<void> unarchiveChat(String chatId);
+
+  Future<void> markRead(String chatId);
+  Future<void> markUnread(String chatId);
+
+  Future<void> muteChat(String chatId, {int? muteUntil});
+  Future<void> unmuteChat(String chatId);
+
+  Future<void> deleteChat(String chatId, String chatType);
+
+  // ── Messages ──────────────────────────────────────────────────────────────
+
+  Future<PaginatedResult<MessageModel>> fetchMessages(
+      FetchMessagesParams params);
+
+  Future<MessageModel> sendMessage({
     required String chatId,
-    required String text,
+    required String chatType,
+    required String contentType,
+    String? text,
+    String? mediaId,
     String? replyToId,
+    List<String>? mentions,
   });
 
-  /// Send a media message (image/video/audio/file).
   Future<MessageModel> sendMediaMessage({
     required String chatId,
+    required String chatType,
     required String localPath,
     required MessageType type,
     String? text,
   });
 
-  /// Mark all messages in [chatId] as read.
-  Future<void> markAsRead(String chatId);
+  Future<MessageModel> editMessage(String messageId, String text);
 
-  /// Delete a message (soft delete).
-  Future<void> deleteMessage(String chatId, String messageId);
+  Future<void> deleteMessage(List<String> messageIds);
+  Future<void> deleteMessageForEveryone(List<String> messageIds,
+      {required String chatId});
 
-  /// Create a new direct chat with [userId].
-  Future<ChatModel> createDirectChat(String userId);
+  Future<void> starMessage(String messageId, String chatId, String chatType);
+  Future<void> unstarMessage(String messageId, String chatId, String chatType);
 
-  /// Create a group chat.
-  Future<ChatModel> createGroup({
-    required String name,
-    required List<String> memberIds,
-    String? avatar,
-  });
+  Future<void> forwardMessage(
+      List<String> messageIds, List<String> targetChatIds);
 
-  /// Clear unread count for [chatId].
-  Future<void> clearUnread(String chatId);
+  Future<void> addReaction(
+      String messageId, String chatId, String reaction);
+  Future<void> removeReaction(String messageId, String chatId);
+
+  Future<void> pinMessage(String messageId, String chatId);
+  Future<void> unpinMessage(String messageId);
+
+  Future<MessageModel?> getPinnedMessage(String chatId);
 }

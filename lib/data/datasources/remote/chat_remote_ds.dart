@@ -6,115 +6,270 @@ import '../../models/chat_model.dart';
 import '../../models/message_model.dart';
 import '../../repositories/chat_repository.dart';
 
-/// Remote data source — calls the REST API for chat operations.
+/// Remote data source — calls the real SocialEngine REST API.
+/// All endpoint paths mirror the RN app's services/chat.js & services/message.js.
 class ChatRemoteDataSource implements ChatRepository {
   const ChatRemoteDataSource(this._api);
-
   final ApiClient _api;
 
+  // ── Chat list ─────────────────────────────────────────────────────────────
+
   @override
-  Future<List<ChatModel>> getChats({int page = 1, int limit = 20}) async {
-    final data = await _api.get<List<dynamic>>(
+  Future<PaginatedResult<ChatModel>> fetchChats(
+      FetchChatsParams params) async {
+    final raw = await _api.get<Map<String, dynamic>>(
       ApiEndpoints.chats,
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: {
+        'archive': params.archive,
+        'unread': params.unread,
+        'group': params.group,
+        'limit': params.limit,
+        if (params.lastMessage != null) 'lastMessage': params.lastMessage,
+      },
     );
-    return data.map((e) => ChatModel.fromJson(e as Map<String, dynamic>)).toList();
+    final chats = (raw['chats'] as List? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map((e) => ChatModel.fromJson(e))
+        .toList();
+    return PaginatedResult(
+      items: chats,
+      hasMore: raw['more'] == true,
+    );
   }
 
   @override
   Future<ChatModel> getChatById(String chatId) async {
-    final data = await _api.get<Map<String, dynamic>>(
+    final raw = await _api.get<Map<String, dynamic>>(
       ApiEndpoints.chatById(chatId),
     );
-    return ChatModel.fromJson(data);
+    return ChatModel.fromJson(raw);
   }
 
   @override
-  Future<List<MessageModel>> getMessages(
-    String chatId, {
-    int page = 1,
-    int limit = 30,
-  }) async {
-    final data = await _api.get<List<dynamic>>(
-      ApiEndpoints.chatMessages(chatId),
-      queryParameters: {'page': page, 'limit': limit},
+  Future<PaginatedResult<ChatModel>> searchChats(String query) async {
+    final raw = await _api.get<Map<String, dynamic>>(
+      ApiEndpoints.chatSearch,
+      queryParameters: {'search': query, 'limit': 5},
     );
-    return data
-        .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+    final chats = (raw['chats'] as List? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map((e) => ChatModel.fromJson(e))
         .toList();
+    return PaginatedResult(items: chats, hasMore: false);
   }
 
   @override
-  Future<MessageModel> sendTextMessage({
-    required String chatId,
-    required String text,
-    String? replyToId,
-  }) async {
-    final data = await _api.post<Map<String, dynamic>>(
-      ApiEndpoints.sendMessage(chatId),
+  Future<List<ChatModel>> getNewChatUsers(String query) async {
+    final raw = await _api.get<Map<String, dynamic>>(
+      ApiEndpoints.chatNewChat,
+      queryParameters: {'search': query},
+    );
+    final chats = (raw['chats'] as List? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map((e) => ChatModel.fromJson(e))
+        .toList();
+    return chats;
+  }
+
+  @override
+  Future<int> getArchiveCount() async {
+    final raw = await _api.get<Map<String, dynamic>>(
+      ApiEndpoints.chatArchiveCount,
+    );
+    return (raw['count'] as num?)?.toInt() ?? 0;
+  }
+
+  // ── Chat actions ──────────────────────────────────────────────────────────
+
+  @override
+  Future<void> pinChat(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatPin, data: {'chat': chatId});
+
+  @override
+  Future<void> unpinChat(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatUnpin, data: {'chat': chatId});
+
+  @override
+  Future<void> archiveChat(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatArchive, data: {'chat': chatId});
+
+  @override
+  Future<void> unarchiveChat(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatUnarchive, data: {'chat': chatId});
+
+  @override
+  Future<void> markRead(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatMarkRead, data: {'chat': chatId});
+
+  @override
+  Future<void> markUnread(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatMarkUnread, data: {'chat': chatId});
+
+  @override
+  Future<void> muteChat(String chatId, {int? muteUntil}) => _api.post<void>(
+        ApiEndpoints.chatMute,
+        data: {
+          'chat': chatId,
+          if (muteUntil != null) 'muteUntil': muteUntil,
+        },
+      );
+
+  @override
+  Future<void> unmuteChat(String chatId) =>
+      _api.post<void>(ApiEndpoints.chatUnmute, data: {'chat': chatId});
+
+  @override
+  Future<void> deleteChat(String chatId, String chatType) =>
+      _api.post<void>(ApiEndpoints.chatDelete, data: [
+        {'chat': chatId, 'chatType': chatType},
+      ]);
+
+  // ── Messages ──────────────────────────────────────────────────────────────
+
+  @override
+  Future<PaginatedResult<MessageModel>> fetchMessages(
+      FetchMessagesParams params) async {
+    // Build query string manually — ApiClient.post() doesn't accept queryParameters
+    final queryParts = <String>[
+      'limit=${params.limit}',
+      if (params.lastMessage != null) 'lastMessage=${Uri.encodeComponent(params.lastMessage!)}',
+      if (params.beforeMessage != null) 'beforeMessage=${Uri.encodeComponent(params.beforeMessage!)}',
+      if (params.search != null) 'search=${Uri.encodeComponent(params.search!)}',
+    ];
+    final qs = queryParts.isEmpty ? '' : '?${queryParts.join('&')}';
+    final url = '${ApiEndpoints.messages(params.chatId, params.chatType)}$qs';
+
+    final raw = await _api.post<Map<String, dynamic>>(
+      url,
       data: {
-        'type': 'text',
-        'text': text,
-        if (replyToId != null) 'reply_to_id': replyToId,
+        if (params.password != null) 'password': params.password,
       },
     );
-    return MessageModel.fromJson(data);
+    final messages = (raw['messages'] as List? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map((e) => MessageModel.fromJson(e))
+        .toList();
+    return PaginatedResult(items: messages, hasMore: raw['more'] == true);
+  }
+
+  @override
+  Future<MessageModel> sendMessage({
+    required String chatId,
+    required String chatType,
+    required String contentType,
+    String? text,
+    String? mediaId,
+    String? replyToId,
+    List<String>? mentions,
+  }) async {
+    final raw = await _api.post<Map<String, dynamic>>(
+      ApiEndpoints.sendMessage,
+      data: {
+        'chat': chatId,
+        'chatType': chatType,
+        'contentType': contentType,
+        if (text != null) 'text': text,
+        if (mediaId != null) 'media': mediaId,
+        if (replyToId != null) 'replyTo': replyToId,
+        if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+      },
+    );
+    return MessageModel.fromJson(raw);
   }
 
   @override
   Future<MessageModel> sendMediaMessage({
     required String chatId,
+    required String chatType,
     required String localPath,
     required MessageType type,
     String? text,
   }) async {
     final formData = FormData.fromMap({
-      'type': type.name,
+      'chat': chatId,
+      'chatType': chatType,
+      'contentType': type.name,
       'file': await MultipartFile.fromFile(localPath),
       if (text != null) 'text': text,
     });
-    final data = await _api.uploadFile<Map<String, dynamic>>(
-      ApiEndpoints.sendMessage(chatId),
+    final raw = await _api.uploadFile<Map<String, dynamic>>(
+      ApiEndpoints.sendMessage,
       formData,
     );
-    return MessageModel.fromJson(data);
+    return MessageModel.fromJson(raw);
   }
 
   @override
-  Future<void> markAsRead(String chatId) =>
-      _api.post<void>('${ApiEndpoints.chatById(chatId)}/read');
-
-  @override
-  Future<void> deleteMessage(String chatId, String messageId) =>
-      _api.delete<void>('${ApiEndpoints.chatMessages(chatId)}/$messageId');
-
-  @override
-  Future<ChatModel> createDirectChat(String userId) async {
-    final data = await _api.post<Map<String, dynamic>>(
-      ApiEndpoints.chats,
-      data: {'type': 'direct', 'user_id': userId},
+  Future<MessageModel> editMessage(String messageId, String text) async {
+    final raw = await _api.post<Map<String, dynamic>>(
+      ApiEndpoints.messageEdit,
+      data: {'message': messageId, 'text': text},
     );
-    return ChatModel.fromJson(data);
+    return MessageModel.fromJson(raw);
   }
 
   @override
-  Future<ChatModel> createGroup({
-    required String name,
-    required List<String> memberIds,
-    String? avatar,
-  }) async {
-    final data = await _api.post<Map<String, dynamic>>(
-      ApiEndpoints.chats,
-      data: {
-        'type': 'group',
-        'name': name,
-        'member_ids': memberIds,
-      },
-    );
-    return ChatModel.fromJson(data);
-  }
+  Future<void> deleteMessage(List<String> messageIds) =>
+      _api.post<void>(ApiEndpoints.messageDelete,
+          data: messageIds.map((id) => {'message': id}).toList());
 
   @override
-  Future<void> clearUnread(String chatId) =>
-      _api.post<void>('${ApiEndpoints.chatById(chatId)}/clear-unread');
+  Future<void> deleteMessageForEveryone(List<String> messageIds,
+      {required String chatId}) =>
+      _api.post<void>(ApiEndpoints.messageDeleteEveryone,
+          data: messageIds
+              .map((id) => {'message': id, 'chat': chatId})
+              .toList());
+
+  @override
+  Future<void> starMessage(
+          String messageId, String chatId, String chatType) =>
+      _api.post<void>(ApiEndpoints.messageStarred,
+          data: {'message': messageId, 'chat': chatId, 'chatType': chatType});
+
+  @override
+  Future<void> unstarMessage(
+          String messageId, String chatId, String chatType) =>
+      _api.post<void>(ApiEndpoints.messageUnstarred,
+          data: {'message': messageId, 'chat': chatId, 'chatType': chatType});
+
+  @override
+  Future<void> forwardMessage(
+      List<String> messageIds, List<String> targetChatIds) =>
+      _api.post<void>(ApiEndpoints.messageForward,
+          data: {'messages': messageIds, 'chats': targetChatIds});
+
+  @override
+  Future<void> addReaction(
+      String messageId, String chatId, String reaction) =>
+      _api.post<void>(ApiEndpoints.messageReaction,
+          data: {'message': messageId, 'chat': chatId, 'reaction': reaction});
+
+  @override
+  Future<void> removeReaction(String messageId, String chatId) =>
+      _api.post<void>(ApiEndpoints.messageRemoveReaction,
+          data: {'message': messageId, 'chat': chatId});
+
+  @override
+  Future<void> pinMessage(String messageId, String chatId) =>
+      _api.post<void>(ApiEndpoints.messagePin,
+          data: {'message': messageId, 'chat': chatId});
+
+  @override
+  Future<void> unpinMessage(String messageId) =>
+      _api.delete<void>(ApiEndpoints.messageUnpin(messageId));
+
+  @override
+  Future<MessageModel?> getPinnedMessage(String chatId) async {
+    try {
+      final raw = await _api.get<Map<String, dynamic>>(
+        ApiEndpoints.chatPinMessage(chatId),
+      );
+      final list = raw['data'] as List?;
+      if (list == null || list.isEmpty) return null;
+      return MessageModel.fromJson(list.first as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
 }
