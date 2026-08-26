@@ -132,7 +132,8 @@ class ChatRemoteDataSource implements ChatRepository {
   Future<PaginatedResult<MessageModel>> fetchMessages(
       FetchMessagesParams params) async {
     // SE backend URL uses 'user'/'group' — convert from '0'/'1'
-    final receiverType = params.chatType == '1' ? 'group' : 'user';
+    final receiverType = (params.chatType == '1' || params.chatType == 'group') ? 'group' : 'user';
+
     final queryParts = <String>[
       'limit=${params.limit}',
       if (params.lastMessage != null) 'lastMessage=${Uri.encodeComponent(params.lastMessage!)}',
@@ -166,7 +167,8 @@ class ChatRemoteDataSource implements ChatRepository {
     List<String>? mentions,
   }) async {
     // SE backend expects 'receiver'+'receiverType' with values 'user'/'group'
-    final receiverType = chatType == '1' ? 'group' : 'user';
+    final receiverType = (chatType == '1' || chatType == 'group') ? 'group' : 'user';
+
     final raw = await _api.post<Map<String, dynamic>>(
       ApiEndpoints.sendMessage,
       data: {
@@ -192,7 +194,8 @@ class ChatRemoteDataSource implements ChatRepository {
   }) async {
     final filename = localPath.split(RegExp(r'[/\\]')).last;
     // RN uses /message/media for upload then /message with receiver+receiverType
-    final receiverType = chatType == '1' ? 'group' : 'user';
+    final receiverType = (chatType == '1' || chatType == 'group') ? 'group' : 'user';
+
 
     // Step 1: upload the file to /message/media
     // final filename = localPath.split(RegExp(r'[/\\]')).last;
