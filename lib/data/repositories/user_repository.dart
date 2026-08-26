@@ -69,4 +69,7 @@ abstract interface class UserRepository {
 
   /// Unblock a user.
   Future<void> unblockUser(String userId);
+
+  /// Online friends for the chat-list strip — RN `GET /friend/active`.
+  Future<List<UserModel>> fetchActiveFriends();
 }

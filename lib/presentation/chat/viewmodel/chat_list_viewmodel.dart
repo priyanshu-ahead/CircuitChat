@@ -85,10 +85,21 @@ enum ChatListStatus { initial, loading, success, loadingMore, error }
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 class ChatListViewModel extends Notifier<ChatListState> {
+  late final void Function(dynamic) _newMessageListener;
+  late final void Function(dynamic) _onlineListener;
+  late final void Function(dynamic) _offlineListener;
+  late final void Function(dynamic) _userStatusListener;
+  late final void Function(dynamic) _markReadListener;
+
   @override
   ChatListState build() {
     // Do NOT auto-load here. The screen calls loadOnce() from initState()
     // so that IndexedStack doesn't trigger all 4 tabs simultaneously.
+    _newMessageListener = _onNewMessage;
+    _onlineListener = _onOnline;
+    _offlineListener = _onOffline;
+    _userStatusListener = _onUserStatus;
+    _markReadListener = _onMarkRead;
     _subscribeSocket();
     ref.onDispose(_unsubscribeSocket);
     return const ChatListState(status: ChatListStatus.initial);
@@ -111,17 +122,19 @@ class ChatListViewModel extends Notifier<ChatListState> {
   // ── Socket ────────────────────────────────────────────────────────────────
 
   void _subscribeSocket() {
-    _socket.on(SocketEvents.newMessage, _onNewMessage);
-    _socket.on(SocketEvents.online,     _onOnline);
-    _socket.on(SocketEvents.offline,    _onOffline);
-    _socket.on(SocketEvents.markRead,   _onMarkRead);
+    _socket.on(SocketEvents.newMessage, _newMessageListener);
+    _socket.on(SocketEvents.online, _onlineListener);
+    _socket.on(SocketEvents.offline, _offlineListener);
+    _socket.on(SocketEvents.userStatus, _userStatusListener);
+    _socket.on(SocketEvents.markRead, _markReadListener);
   }
 
   void _unsubscribeSocket() {
-    _socket.off(SocketEvents.newMessage);
-    _socket.off(SocketEvents.online);
-    _socket.off(SocketEvents.offline);
-    _socket.off(SocketEvents.markRead);
+    _socket.off(SocketEvents.newMessage, _newMessageListener);
+    _socket.off(SocketEvents.online, _onlineListener);
+    _socket.off(SocketEvents.offline, _offlineListener);
+    _socket.off(SocketEvents.userStatus, _userStatusListener);
+    _socket.off(SocketEvents.markRead, _markReadListener);
   }
 
   void _onNewMessage(dynamic data) {
@@ -145,34 +158,45 @@ class ChatListViewModel extends Notifier<ChatListState> {
     );
   }
 
+  bool _isDirectPeer(ChatModel c, String userId) {
+    if (c.type != ChatType.direct) return false;
+    return c.id == userId || c.members.any((m) => m.id == userId);
+  }
+
+  void _setPeerOnline(String userId, bool online) {
+    state = state.copyWith(
+      chats: state.chats
+          .map((c) => _isDirectPeer(c, userId) ? c.copyWith(isOnline: online) : c)
+          .toList(),
+    );
+  }
+
   void _onOnline(dynamic data) {
     if (data is! Map) return;
-    final userId = data['userId']?.toString() ?? data['user']?.toString();
+    final userId = data['userId']?.toString() ??
+        data['user']?.toString() ??
+        data['_id']?.toString();
     if (userId == null) return;
-    state = state.copyWith(
-      chats: state.chats.map((c) {
-        if (c.type == ChatType.direct &&
-            c.members.any((m) => m.id == userId)) {
-          return c.copyWith(isOnline: true);
-        }
-        return c;
-      }).toList(),
-    );
+    _setPeerOnline(userId, true);
   }
 
   void _onOffline(dynamic data) {
     if (data is! Map) return;
-    final userId = data['userId']?.toString() ?? data['user']?.toString();
+    final userId = data['userId']?.toString() ??
+        data['user']?.toString() ??
+        data['_id']?.toString();
     if (userId == null) return;
-    state = state.copyWith(
-      chats: state.chats.map((c) {
-        if (c.type == ChatType.direct &&
-            c.members.any((m) => m.id == userId)) {
-          return c.copyWith(isOnline: false);
-        }
-        return c;
-      }).toList(),
-    );
+    _setPeerOnline(userId, false);
+  }
+
+  void _onUserStatus(dynamic data) {
+    if (data is! Map) return;
+    final userId = (data['_id'] ?? data['id'] ?? data['userId'])?.toString();
+    if (userId == null || userId.isEmpty) return;
+    final active = data['active'] == true ||
+        data['active'] == 1 ||
+        data['active'] == '1';
+    _setPeerOnline(userId, active);
   }
 
   void _onMarkRead(dynamic data) {

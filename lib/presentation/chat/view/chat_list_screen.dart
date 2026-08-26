@@ -9,6 +9,7 @@ import '../../../data/models/message_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../presentation/common/widgets/active_users_carousel.dart';
 import '../../../presentation/common/widgets/shimmer_list.dart';
+import '../viewmodel/active_users_viewmodel.dart';
 import '../viewmodel/chat_list_viewmodel.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     // Lazy-load: only fetch when this screen actually mounts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatListViewModelProvider.notifier).loadOnce();
+      ref.read(activeUsersViewModelProvider.notifier).loadOnce();
     });
   }
 
@@ -49,6 +51,27 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  ChatModel _chatForUser(UserModel user) {
+    final chats = ref.read(chatListViewModelProvider).chats;
+    for (final c in chats) {
+      if (c.type == ChatType.direct &&
+          (c.id == user.id || c.members.any((m) => m.id == user.id))) {
+        return c;
+      }
+    }
+    return ChatModel(
+      id: user.id,
+      type: ChatType.direct,
+      name: user.name,
+      avatar: user.avatar,
+      isOnline: true,
+    );
+  }
+
+  void _openChat(ChatModel chat) {
+    context.push(Routes.chatDetailPath(chat.id), extra: chat);
   }
 
   @override
@@ -137,15 +160,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           ),
           // ── Online users strip (mirrors RN ActiveUsers between search & filter tabs)
           ActiveUsersCarousel(
-            onTap: (UserModel user) {
-              final chat = ChatModel(
-                id:     user.id,
-                type:   ChatType.direct,
-                name:   user.name,
-                avatar: user.avatar,
-              );
-              context.push(Routes.chatDetail, extra: chat);
-            },
+            onTap: (UserModel user) => _openChat(_chatForUser(user)),
           ),
           // Filter chips
           SingleChildScrollView(
@@ -231,8 +246,12 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
     return RefreshIndicator(
       color: const Color(0xFF1976D2),
-      onRefresh: () =>
+      onRefresh: () async {
+        await Future.wait([
           ref.read(chatListViewModelProvider.notifier).refresh(),
+          ref.read(activeUsersViewModelProvider.notifier).refresh(),
+        ]);
+      },
       child: ListView.separated(
         controller: _scrollCtrl,
         itemCount: chats.length + (state.isLoadingMore ? 1 : 0),
@@ -257,7 +276,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               ref
                   .read(chatListViewModelProvider.notifier)
                   .markRead(chats[i].id);
-              context.push(Routes.chatDetail, extra: chats[i]);
+              _openChat(chats[i]);
             },
             onPin: () => chats[i].isPinned
                 ? ref

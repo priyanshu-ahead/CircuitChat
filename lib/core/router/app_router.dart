@@ -49,6 +49,7 @@ abstract class Routes {
   // Chats
   static const chatList          = '/chats';
   static const chatDetail        = '/chats/:chatId';
+  static String chatDetailPath(String chatId) => '/chats/$chatId';
   static const chatProfile       = '/chats/:chatId/profile';
   static const chatMedia         = '/chats/:chatId/media';
   static const chatStarred       = '/chats/:chatId/starred';

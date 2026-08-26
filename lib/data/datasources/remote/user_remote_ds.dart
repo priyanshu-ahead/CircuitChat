@@ -273,4 +273,29 @@ class UserRemoteDataSource implements UserRepository {
   @override
   Future<void> unblockUser(String userId) =>
       _api.delete<void>('/users/$userId/block');
+
+  @override
+  Future<List<UserModel>> fetchActiveFriends() async {
+    final raw = await _api.get<dynamic>(ApiEndpoints.friendActive);
+    List list = const [];
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map) {
+      if (raw['data'] is List) {
+        list = raw['data'] as List;
+      } else if (raw['users'] is List) {
+        list = raw['users'] as List;
+      }
+    }
+    return list
+        .whereType<Map>()
+        .map((e) => UserModel.fromJson(Map<String, dynamic>.from(e)))
+        .map((u) => u.copyWith(
+              active: true,
+              isOnline: true,
+              state: u.state == 0 ? 1 : u.state,
+            ))
+        .where((u) => u.id.isNotEmpty)
+        .toList();
+  }
 }

@@ -8,6 +8,7 @@ import '../../core/network/api_endpoints.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../presentation/chat/viewmodel/active_users_viewmodel.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,9 @@ class AppInitViewModel extends Notifier<AppInitState> {
       SocketService.instance.connect(token);
       dev.log('AppInit: socket connected', name: 'AppInit');
     }
+
+    // Same as RN AppContext.getActiveFriends() after boot.
+    ref.read(activeUsersViewModelProvider.notifier).loadOnce();
 
     // Background contact sync (fire-and-forget)
     ref.read(contactSyncServiceProvider).sync().catchError((_) {});

@@ -11,6 +11,8 @@ abstract class SocketEvents {
   static const stopTyping = 'stop_typing';
   static const online = 'online';
   static const offline = 'offline';
+  static const userStatus = 'user_status';
+  static const refresh = 'refresh';
   static const markRead = 'mark_read';
   static const call = 'call';
   static const joinChat = 'join_chat';
@@ -26,6 +28,9 @@ class SocketService {
   static final SocketService instance = SocketService._();
 
   io.Socket? _socket;
+
+  /// Handlers registered even before [connect], then attached to the socket.
+  final Map<String, List<void Function(dynamic)>> _handlers = {};
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -73,6 +78,18 @@ class SocketService {
         _log('❌ Connect error: $error');
         _log('Socket connected: ${_socket?.connected}');
       });
+
+    _attachStoredHandlers();
+  }
+
+  void _attachStoredHandlers() {
+    final socket = _socket;
+    if (socket == null) return;
+    for (final entry in _handlers.entries) {
+      for (final handler in entry.value) {
+        socket.on(entry.key, handler);
+      }
+    }
   }
 
   void disconnect() {
@@ -133,13 +150,11 @@ class SocketService {
       String event,
       void Function(dynamic data) handler,
       ) {
-    if (_socket == null) {
-      _log('⚠️ Cannot listen to "$event": socket is null');
-      return;
+    final list = _handlers.putIfAbsent(event, () => []);
+    if (!list.contains(handler)) {
+      list.add(handler);
     }
-
-    _socket!.on(event, handler);
-
+    _socket?.on(event, handler);
     _log('👂 Listening: $event');
   }
 
@@ -151,16 +166,13 @@ class SocketService {
       String event, [
         void Function(dynamic data)? handler,
       ]) {
-    if (_socket == null) {
-      return;
-    }
-
     if (handler != null) {
-      _socket!.off(event, handler);
+      _handlers[event]?.remove(handler);
+      _socket?.off(event, handler);
     } else {
-      _socket!.off(event);
+      _handlers.remove(event);
+      _socket?.off(event);
     }
-
     _log('🚫 Removed listener: $event');
   }
 
