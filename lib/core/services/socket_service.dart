@@ -4,93 +4,214 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../constants/app_constants.dart';
 
-/// Socket.io event name constants — mirrors RN's SOCKET_EVENTS constant.
+/// Socket.io event name constants.
 abstract class SocketEvents {
-  static const newMessage   = 'new_message';
-  static const typing       = 'typing';
-  static const stopTyping   = 'stop_typing';
-  static const online       = 'online';
-  static const offline      = 'offline';
-  static const markRead     = 'mark_read';
-  static const call         = 'call';
-  static const joinChat     = 'join_chat';
-  static const leaveChat    = 'leave_chat';
-  static const messageEdit  = 'message_edit';
+  static const newMessage = 'new_message';
+  static const typing = 'typing';
+  static const stopTyping = 'stop_typing';
+  static const online = 'online';
+  static const offline = 'offline';
+  static const markRead = 'mark_read';
+  static const call = 'call';
+  static const joinChat = 'join_chat';
+  static const leaveChat = 'leave_chat';
+  static const messageEdit = 'message_edit';
   static const messageDelete = 'message_delete';
-  static const reaction     = 'reaction';
+  static const reaction = 'reaction';
 }
 
-/// socket.io-client wrapper (replaces socket.io-client from RN).
-/// Singleton — call [connect] once after auth, [disconnect] on logout.
 class SocketService {
   SocketService._();
+
   static final SocketService instance = SocketService._();
 
   io.Socket? _socket;
+
   bool get isConnected => _socket?.connected ?? false;
 
-  // ── Connection ────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Connection
+  // ---------------------------------------------------------------------------
 
   void connect(String authToken) {
-    if (isConnected) return;
+    // Don't create another socket if already connected.
+    if (isConnected) {
+      _log('Socket already connected');
+      return;
+    }
+
+    // Dispose an old socket before creating a new one.
+    _socket?.dispose();
+
+    final socketUrl = '${AppConstants.socketUrl}?token=$authToken';
+
+    _log('Connecting to: ${AppConstants.socketUrl}?token=***');
 
     _socket = io.io(
-      AppConstants.socketUrl,
+      socketUrl,
       io.OptionBuilder()
           .setTransports(['websocket'])
           .enableAutoConnect()
-          .enableReconnection()
-          .setReconnectionDelay(2000)
-          .setReconnectionAttempts(10)
-          .setAuth({'token': authToken})
           .build(),
     );
 
     _socket!
-      ..onConnect((_)      => _log('✅ Connected'))
-      ..onDisconnect((_)   => _log('🔌 Disconnected'))
-      ..onError((err)      => _log('❌ Error: $err'))
-      ..onConnectError((e) => _log('❌ Connect error: $e'));
+      ..onConnect((_) {
+        _log('✅ Connected to server');
+        _log('Socket connected: ${_socket?.connected}');
+      })
+      ..onDisconnect((reason) {
+        _log('🔌 Disconnected from server');
+        _log('Disconnect reason: $reason');
+      })
+      ..onError((error) {
+        _log('❌ Error while connection');
+        _log('Socket connected: ${_socket?.connected}');
+        _log('Error: $error');
+      })
+      ..onConnectError((error) {
+        _log('❌ Connect error: $error');
+        _log('Socket connected: ${_socket?.connected}');
+      });
   }
 
   void disconnect() {
+    _log('Disconnecting socket');
+
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
   }
 
-  // ── Emit ──────────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Emit
+  // ---------------------------------------------------------------------------
 
-  void emit(String event, dynamic data) => _socket?.emit(event, data);
+  void emit(String event, [dynamic data]) {
+    if (_socket == null) {
+      _log('⚠️ Cannot emit "$event": socket is null');
+      return;
+    }
 
-  void emitWithAck(String event, dynamic data,
-      {required void Function(dynamic) ack}) =>
-      _socket?.emitWithAck(event, data, ack: ack);
+    if (!isConnected) {
+      _log('⚠️ Cannot emit "$event": socket is not connected');
+      return;
+    }
 
-  // ── Subscribe / Unsubscribe ────────────────────────────────────────────────
+    _log('➡️ Emit: $event');
 
-  void on(String event, void Function(dynamic) handler) =>
-      _socket?.on(event, handler);
+    if (data != null) {
+      _log('Data: $data');
+      _socket!.emit(event, data);
+    } else {
+      _socket!.emit(event);
+    }
+  }
 
-  void off(String event, [void Function(dynamic)? handler]) =>
-      _socket?.off(event, handler);
+  void emitWithAck(
+      String event,
+      dynamic data, {
+        required void Function(dynamic response) ack,
+      }) {
+    if (_socket == null || !isConnected) {
+      _log('⚠️ Cannot emitWithAck "$event": socket not connected');
+      return;
+    }
 
-  // ── Chat room helpers ─────────────────────────────────────────────────────
+    _socket!.emitWithAck(
+      event,
+      data,
+      ack: ack,
+    );
+  }
 
-  void joinChat(String chatId) =>
-      emit(SocketEvents.joinChat, {'chatId': chatId});
+  // ---------------------------------------------------------------------------
+  // Subscribe
+  // ---------------------------------------------------------------------------
 
-  void leaveChat(String chatId) =>
-      emit(SocketEvents.leaveChat, {'chatId': chatId});
+  void on(
+      String event,
+      void Function(dynamic data) handler,
+      ) {
+    if (_socket == null) {
+      _log('⚠️ Cannot listen to "$event": socket is null');
+      return;
+    }
 
-  void sendTyping(String chatId) =>
-      emit(SocketEvents.typing, {'chatId': chatId});
+    _socket!.on(event, handler);
 
-  void sendStopTyping(String chatId) =>
-      emit(SocketEvents.stopTyping, {'chatId': chatId});
+    _log('👂 Listening: $event');
+  }
 
-  // ── Internal ──────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Unsubscribe
+  // ---------------------------------------------------------------------------
 
-  void _log(String msg) =>
-      dev.log(msg, name: 'SocketService');
+  void off(
+      String event, [
+        void Function(dynamic data)? handler,
+      ]) {
+    if (_socket == null) {
+      return;
+    }
+
+    if (handler != null) {
+      _socket!.off(event, handler);
+    } else {
+      _socket!.off(event);
+    }
+
+    _log('🚫 Removed listener: $event');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Chat
+  // ---------------------------------------------------------------------------
+
+  void joinChat(String chatId) {
+    emit(
+      SocketEvents.joinChat,
+      {
+        'chatId': chatId,
+      },
+    );
+  }
+
+  void leaveChat(String chatId) {
+    emit(
+      SocketEvents.leaveChat,
+      {
+        'chatId': chatId,
+      },
+    );
+  }
+
+  void sendTyping(String chatId) {
+    emit(
+      SocketEvents.typing,
+      {
+        'chatId': chatId,
+      },
+    );
+  }
+
+  void sendStopTyping(String chatId) {
+    emit(
+      SocketEvents.stopTyping,
+      {
+        'chatId': chatId,
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Logging
+  // ---------------------------------------------------------------------------
+
+  void _log(String message) {
+    dev.log(
+      message,
+      name: 'SocketService',
+    );
+  }
 }

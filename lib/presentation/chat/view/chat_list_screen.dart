@@ -64,12 +64,12 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(Routes.newChat),
-        backgroundColor: const Color(0xFF1976D2),
-        shape: const CircleBorder(),
-        child: const Icon(Icons.edit_rounded, color: Colors.white, size: 22),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () => context.push(Routes.newChat),
+      //   backgroundColor: const Color(0xFF1976D2),
+      //   shape: const CircleBorder(),
+      //   child: const Icon(Icons.edit_rounded, color: Colors.white, size: 22),
+      // ),
     );
   }
 

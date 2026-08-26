@@ -7,7 +7,7 @@ class AppConstants {
   static const int receiveTimeoutMs = 30000;
 
   // ── Socket ────────────────────────────────────────────────────────────────
-  static const String socketUrl = 'https://socket.yourcircuitchat.com';
+  static const String socketUrl = AppConstants.baseUrl;
 
   // ── Pagination ────────────────────────────────────────────────────────────
   static const int defaultPageSize = 20;
