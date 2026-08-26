@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
@@ -56,8 +57,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF2F7),
+      backgroundColor: cc.surfaceBackground,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -67,17 +69,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cc.cardBackground,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.07),
+                    color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.07),
                     blurRadius: 20,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: _pending ? _buildPending() : _buildResult(),
+              child: _pending ? _buildPending(context) : _buildResult(context),
             ),
           ),
         ),
@@ -85,32 +87,36 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     );
   }
 
-  Widget _buildPending() {
+  Widget _buildPending(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(
+        SizedBox(
           width: 32,
           height: 32,
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            color: Color(0xFF1976D2),
+            color: primary,
           ),
         ),
         const SizedBox(height: 20),
         Text(
           AppStrings.verifying,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            color: cc.primaryText,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildResult() {
+  Widget _buildResult(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -136,10 +142,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ? AppStrings.emailVerifiedSuccess
               : (_errorMessage ?? AppStrings.emailVerificationFailed),
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
+            color: cc.primaryText,
             height: 1.5,
           ),
         ),
@@ -150,7 +156,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           child: ElevatedButton(
             onPressed: () => context.go(Routes.login),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
+              backgroundColor: primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

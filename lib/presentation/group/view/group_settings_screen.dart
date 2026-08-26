@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/group_model.dart';
 import '../viewmodel/group_viewmodel.dart';
 
@@ -27,10 +28,8 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: context.cc.surfaceBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
         elevation: 0.5,
         title: const Text(
           'Group Settings',
@@ -132,10 +131,10 @@ class _SectionHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 13,
-            color: Color(0xFF888888),
+            color: context.cc.secondaryText,
           ),
         ),
       );
@@ -149,7 +148,7 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cc.cardBackground,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -208,12 +207,12 @@ class _SettingTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(
-                            fontSize: 15, color: Colors.black87)),
+                        style: TextStyle(
+                            fontSize: 15, color: Theme.of(context).colorScheme.onSurface)),
                     const SizedBox(height: 2),
                     Text(subtitle,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF888888))),
+                        style: TextStyle(
+                            fontSize: 12, color: context.cc.secondaryText)),
                   ],
                 ),
               ),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/message_model.dart';
 
@@ -146,17 +147,19 @@ class ChatStarredScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final state = ref.watch(_starredProvider(chat));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: cc.pageBackground,
+        foregroundColor: cc.primaryText,
         elevation: 0.5,
-        title: const Text(
+        title: Text(
           'Starred Messages',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: cc.primaryText),
         ),
         actions: [
           if (state.messages.isNotEmpty)
@@ -166,24 +169,24 @@ class ChatStarredScreen extends ConsumerWidget {
                   .toggleEditMode(),
               child: Text(
                 state.editMode ? 'Done' : 'Edit',
-                style: const TextStyle(color: Color(0xFF1976D2)),
+                style: TextStyle(color: primary),
               ),
             ),
         ],
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: primary))
           : state.messages.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.star_outline_rounded,
-                          size: 56, color: Color(0xFFCCCCCC)),
-                      SizedBox(height: 12),
+                          size: 56, color: cc.secondaryText),
+                      const SizedBox(height: 12),
                       Text('No starred messages',
                           style: TextStyle(
-                              color: Color(0xFFAAAAAA), fontSize: 15)),
+                              color: cc.secondaryText, fontSize: 15)),
                     ],
                   ),
                 )
@@ -244,16 +247,18 @@ class _StarredItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFFE3F2FD)
-              : Colors.white,
-          border: const Border(
+              ? primary.withValues(alpha: 0.15)
+              : cc.pageBackground,
+          border: Border(
               bottom: BorderSide(
-                  color: Color(0xFFEEEEEE), width: 0.8)),
+                  color: cc.border, width: 0.8)),
         ),
         padding: const EdgeInsets.symmetric(
             horizontal: 14, vertical: 12),
@@ -267,13 +272,13 @@ class _StarredItem extends StatelessWidget {
                     ? Icons.check_circle_rounded
                     : Icons.radio_button_unchecked_rounded,
                 color: isSelected
-                    ? const Color(0xFF1976D2)
-                    : const Color(0xFFCCCCCC),
+                    ? primary
+                    : cc.secondaryText,
               ),
               const SizedBox(width: 10),
             ],
             // Avatar
-            _buildAvatar(message),
+            _buildAvatar(context, message),
             const SizedBox(width: 10),
             // Content
             Expanded(
@@ -285,36 +290,37 @@ class _StarredItem extends StatelessWidget {
                     children: [
                       Text(
                         message.fromMe ? 'You' : 'Contact',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 13),
+                            fontSize: 13,
+                            color: cc.primaryText),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(Icons.arrow_forward_ios_rounded,
                             size: 10,
-                            color: Color(0xFF888888)),
+                            color: cc.secondaryText),
                       ),
                       Expanded(
                         child: Text(
                           'Chat',
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF444444)),
+                              color: cc.secondaryText),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(
                         _formatDate(message.createdAt),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF888888)),
+                            color: cc.secondaryText),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   // Message body
-                  _buildContent(),
+                  _buildContent(context),
                 ],
               ),
             ),
@@ -331,54 +337,56 @@ class _StarredItem extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(MessageModel msg) {
-    return const CircleAvatar(
+  Widget _buildAvatar(BuildContext context, MessageModel msg) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return CircleAvatar(
       radius: 18,
-      backgroundColor: Color(0xFF1976D2),
-      child: Icon(Icons.person_rounded,
+      backgroundColor: primary,
+      child: const Icon(Icons.person_rounded,
           color: Colors.white, size: 18),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
+    final cc = context.cc;
     switch (message.contentType) {
       case ContentType.image:
         return Row(
           children: [
-            const Icon(Icons.photo_outlined,
-                size: 14, color: Color(0xFF888888)),
+            Icon(Icons.photo_outlined,
+                size: 14, color: cc.secondaryText),
             const SizedBox(width: 4),
-            const Text('Photo',
+            Text('Photo',
                 style: TextStyle(
-                    fontSize: 13, color: Color(0xFF888888))),
+                    fontSize: 13, color: cc.secondaryText)),
           ],
         );
       case ContentType.video:
         return Row(children: [
-          const Icon(Icons.videocam_outlined,
-              size: 14, color: Color(0xFF888888)),
+          Icon(Icons.videocam_outlined,
+              size: 14, color: cc.secondaryText),
           const SizedBox(width: 4),
-          const Text('Video',
+          Text('Video',
               style: TextStyle(
-                  fontSize: 13, color: Color(0xFF888888))),
+                  fontSize: 13, color: cc.secondaryText)),
         ]);
       case ContentType.audio:
         return Row(children: [
-          const Icon(Icons.mic_none_rounded,
-              size: 14, color: Color(0xFF888888)),
+          Icon(Icons.mic_none_rounded,
+              size: 14, color: cc.secondaryText),
           const SizedBox(width: 4),
-          const Text('Audio',
+          Text('Audio',
               style: TextStyle(
-                  fontSize: 13, color: Color(0xFF888888))),
+                  fontSize: 13, color: cc.secondaryText)),
         ]);
       case ContentType.file:
         return Row(children: [
-          const Icon(Icons.attach_file_rounded,
-              size: 14, color: Color(0xFF888888)),
+          Icon(Icons.attach_file_rounded,
+              size: 14, color: cc.secondaryText),
           const SizedBox(width: 4),
-          const Text('File',
+          Text('File',
               style: TextStyle(
-                  fontSize: 13, color: Color(0xFF888888))),
+                  fontSize: 13, color: cc.secondaryText)),
         ]);
       default:
         return Text(
@@ -386,7 +394,7 @@ class _StarredItem extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style:
-              const TextStyle(fontSize: 13, color: Colors.black87),
+              TextStyle(fontSize: 13, color: cc.primaryText),
         );
     }
   }
@@ -416,12 +424,13 @@ class _EditBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Container(
       height: 56,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: cc.cardBackground,
         border: Border(
-            top: BorderSide(color: Color(0xFFEEEEEE), width: 0.8)),
+            top: BorderSide(color: cc.border, width: 0.8)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -461,9 +470,11 @@ class _BarAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final c = enabled
-        ? (color ?? const Color(0xFF1976D2))
-        : const Color(0xFFCCCCCC);
+        ? (color ?? primary)
+        : cc.secondaryText;
     return InkWell(
       onTap: enabled ? onTap : null,
       child: Padding(

@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/message_model.dart';
 import '../../../presentation/app_init/app_init_viewmodel.dart';
@@ -140,16 +141,17 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── In-chat search ────────────────────────────────────────────────────────
 
   PreferredSize _buildSearchBar() {
+    final cc = context.cc;
     return PreferredSize(
       preferredSize: const Size.fromHeight(52),
       child: Container(
-        color: Colors.white,
+        color: cc.cardBackground,
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_rounded,
-                  color: Color(0xFF1A1A2E)),
+              icon: Icon(Icons.arrow_back_rounded,
+                  color: cc.primaryText),
               onPressed: () {
                 setState(() { _searchMode = false; _searchCtrl.clear(); });
                 ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -160,10 +162,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
+                style: TextStyle(color: cc.primaryText),
                 decoration: InputDecoration(
                   hintText: 'Search messages…',
+                  hintStyle: TextStyle(color: cc.secondaryText),
                   filled: true,
-                  fillColor: const Color(0xFFF2F4F8),
+                  fillColor: cc.searchBackground,
                   contentPadding: const EdgeInsets.symmetric(
                       vertical: 8, horizontal: 14),
                   border: OutlineInputBorder(
@@ -172,7 +176,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   ),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18),
+                          icon: Icon(Icons.close_rounded, size: 18, color: cc.secondaryText),
                           onPressed: () {
                             _searchCtrl.clear();
                             ref.read(messageViewModelProvider(_vmArg)
@@ -203,8 +207,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // Only Report is "static" (always shown).
 
   void _showChatOptions(ChatModel chat) {
+    final cc = context.cc;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       isScrollControlled: true,
@@ -301,6 +307,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   Future<bool> _confirm(String title, String message) async {
+    final cc = context.cc;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -308,7 +315,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         content: Text(message),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
           TextButton(onPressed: () => Navigator.pop(ctx, true),
               child: Text(title,
                   style: const TextStyle(color: Color(0xFFE53935)))),
@@ -321,8 +328,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── Attach menu ───────────────────────────────────────────────────────────
 
   void _showAttachMenu() {
+    final cc = context.cc;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -335,7 +344,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 width: 36, height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFCCCCCC),
+                    color: cc.border,
                     borderRadius: BorderRadius.circular(2)),
               ),
               Row(
@@ -441,9 +450,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final msgState = ref.watch(messageViewModelProvider(_vmArg));
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: cc.pageBackground,
       appBar: _buildAppBar(msgState),
       body: Column(
         children: [
@@ -465,9 +476,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       floatingActionButton: _showScrollToBottom
           ? FloatingActionButton.small(
               onPressed: _scrollToBottom,
-              backgroundColor: Colors.white,
-              child: const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFF1976D2)))
+              backgroundColor: cc.cardBackground,
+              child: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: primary))
           : null,
     );
   }
@@ -475,6 +486,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── AppBar ────────────────────────────────────────────────────────────────
 
   PreferredSizeWidget _buildAppBar(MessageState msgState) {
+    final cc           = context.cc;
+    final primary      = Theme.of(context).colorScheme.primary;
     final agoraEnabled = ref.read(appInitProvider).agoraEnabled;
     final chatState    = ref.read(chatListViewModelProvider).chats
         .where((c) => c.id == widget.chat.id)
@@ -482,11 +495,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
     debugPrint("check agora enabled or not : $agoraEnabled");
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       elevation: 0,
       titleSpacing: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF1A1A2E)),
+        icon: Icon(Icons.arrow_back_rounded, color: cc.primaryText),
         onPressed: () => Navigator.pop(context),
       ),
       title: GestureDetector(
@@ -499,14 +512,14 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: const Color(0xFFDDE4EF),
+                  backgroundColor: cc.surfaceBackground,
                   backgroundImage: widget.chat.avatar != null
                       ? NetworkImage(widget.chat.avatar!) : null,
                   child: widget.chat.avatar == null
                       ? Icon(
                           widget.chat.type == ChatType.group
                               ? Icons.group_rounded : Icons.person_rounded,
-                          color: const Color(0xFF9AA6B8), size: 20)
+                          color: cc.secondaryText, size: 20)
                       : null,
                 ),
                 if (widget.chat.isOnline && widget.chat.type == ChatType.direct)
@@ -517,7 +530,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF4CAF50),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(color: cc.cardBackground, width: 1.5),
                       ),
                     ),
                   ),
@@ -529,14 +542,14 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(widget.chat.name ?? 'Chat',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E)),
+                          color: cc.primaryText),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   if (msgState.isTyping)
-                    const Text('typing…',
+                    Text('typing…',
                         style: TextStyle(fontSize: 12,
-                            color: Color(0xFF1976D2),
+                            color: primary,
                             fontStyle: FontStyle.italic))
                   else if (widget.chat.isOnline &&
                       widget.chat.type == ChatType.direct)
@@ -554,41 +567,43 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         // Audio call (only when Agora enabled)
         if (agoraEnabled)
           IconButton(
-            icon: const Icon(Icons.call_outlined, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.call_outlined, color: cc.primaryText),
             tooltip: 'Voice Call',
             onPressed: () => _initiateCall(callType: 'audio'),
           ),
         // Video call (only when Agora enabled)
         if (agoraEnabled)
           IconButton(
-            icon: const Icon(Icons.videocam_outlined, color: Color(0xFF1A1A2E)),
+            icon: Icon(Icons.videocam_outlined, color: cc.primaryText),
             tooltip: 'Video Call',
             onPressed: () => _initiateCall(callType: 'video'),
           ),
         // Search in chat
         IconButton(
-          icon: const Icon(Icons.search_rounded, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.search_rounded, color: cc.primaryText),
           tooltip: 'Search',
           onPressed: () => setState(() => _searchMode = true),
         ),
         // Options menu (⋮)
         IconButton(
-          icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF1A1A2E)),
+          icon: Icon(Icons.more_vert_rounded, color: cc.primaryText),
           tooltip: 'Options',
           onPressed: () => _showChatOptions(chatState),
         ),
       ],
       bottom: _searchMode
           ? _buildSearchBar()
-          : const PreferredSize(
-              preferredSize: Size.fromHeight(0.5),
-              child: Divider(height: 0, color: Color(0xFFEEEEEE))),
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(0.5),
+              child: Divider(height: 0, color: cc.divider)),
     );
   }
 
   // ── Message list ──────────────────────────────────────────────────────────
 
   Widget _buildMessageList(MessageState msgState) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     if (msgState.isLoading) return const MessageShimmerList();
 
     if (msgState.status == MessageStatus2.error) {
@@ -596,18 +611,18 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: Color(0xFF9AA6B8)),
+            Icon(Icons.error_outline_rounded,
+                size: 48, color: cc.secondaryText),
             const SizedBox(height: 8),
             Text(msgState.errorMessage ?? 'Failed to load messages.',
-                style: const TextStyle(color: Color(0xFF9AA6B8))),
+                style: TextStyle(color: cc.secondaryText)),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => ref
                   .read(messageViewModelProvider(_vmArg).notifier)
                   .reload(),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1976D2),
+                  backgroundColor: primary,
                   foregroundColor: Colors.white),
               child: const Text('Retry'),
             ),
@@ -618,10 +633,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
     final messages = msgState.messages;
     if (messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Text('No messages yet.\nSay hello! 👋',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF9AA6B8), fontSize: 15)),
+            style: TextStyle(color: cc.secondaryText, fontSize: 15)),
       );
     }
 
@@ -635,12 +650,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       itemBuilder: (_, i) {
         // Spinner at visual top (oldest end) when loading older messages
         if (i == total) {
-          return const Padding(
-            padding: EdgeInsets.only(top: 8),
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
             child: Center(
               child: SizedBox(width: 24, height: 24,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Color(0xFF1976D2))),
+                      strokeWidth: 2, color: primary)),
             ),
           );
         }
@@ -672,13 +687,14 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── Typing indicator ──────────────────────────────────────────────────────
 
   Widget _buildTypingIndicator() {
+    final cc = context.cc;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 4, 80, 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cc.cardBackground,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -694,15 +710,17 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── Reply preview bar ─────────────────────────────────────────────────────
 
   Widget _buildReplyPreview(MessageModel replyTo) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Container(
-      color: const Color(0xFFF2F4F8),
+      color: cc.cardBackground,
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       child: Row(
         children: [
           Container(
             width: 3, height: 36,
             decoration: BoxDecoration(
-                color: const Color(0xFF1976D2),
+                color: primary,
                 borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(width: 10),
@@ -710,19 +728,19 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Reply',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF1976D2),
+                Text('Reply',
+                    style: TextStyle(fontSize: 12, color: primary,
                         fontWeight: FontWeight.w600)),
                 Text(replyTo.text ?? _contentLabel(replyTo.contentType),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFF666666))),
+                    style: TextStyle(
+                        fontSize: 13, color: cc.secondaryText)),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded,
-                size: 18, color: Color(0xFF9AA6B8)),
+            icon: Icon(Icons.close_rounded,
+                size: 18, color: cc.secondaryText),
             onPressed: () => ref
                 .read(messageViewModelProvider(_vmArg).notifier)
                 .setReplyTo(null),
@@ -735,11 +753,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── Input bar ─────────────────────────────────────────────────────────────
 
   Widget _buildInputBar() {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final hasText = _textCtrl.text.trim().isNotEmpty;
 
     if (_isRecording) {
       return Container(
-        color: Colors.white,
+        color: cc.cardBackground,
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
         child: SafeArea(
           top: false,
@@ -778,8 +798,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 onTap: _stopAndSendRecording,
                 child: Container(
                   width: 44, height: 44,
-                  decoration: const BoxDecoration(
-                      color: Color(0xFF1976D2), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: primary, shape: BoxShape.circle),
                   child: const Icon(Icons.send_rounded,
                       color: Colors.white, size: 22),
                 ),
@@ -791,7 +811,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     }
 
     return Container(
-      color: Colors.white,
+      color: cc.cardBackground,
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       child: SafeArea(
         top: false,
@@ -800,8 +820,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           children: [
             // Attach
             IconButton(
-              icon: const Icon(Icons.attach_file_rounded,
-                  color: Color(0xFF9AA6B8)),
+              icon: Icon(Icons.attach_file_rounded,
+                  color: cc.secondaryText),
               onPressed: _showAttachMenu,
             ),
             // Text field
@@ -809,19 +829,20 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 120),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F4F8),
+                  color: cc.inputBackground,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: _textCtrl,
                   maxLines: null,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: cc.primaryText),
+                  decoration: InputDecoration(
                     hintText: 'Message…',
                     hintStyle: TextStyle(
-                        color: Color(0xFF9AA6B8), fontSize: 15),
+                        color: cc.secondaryText, fontSize: 15),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                   ),
                   onSubmitted: (_) => _sendText(),
@@ -840,13 +861,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   width: 44, height: 44,
                   decoration: BoxDecoration(
                     color: hasText
-                        ? const Color(0xFF1976D2)
-                        : const Color(0xFFF2F4F8),
+                        ? primary
+                        : cc.inputBackground,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     hasText ? Icons.send_rounded : Icons.mic_none_rounded,
-                    color: hasText ? Colors.white : const Color(0xFF9AA6B8),
+                    color: hasText ? Colors.white : cc.secondaryText,
                     size: 22,
                   ),
                 ),
@@ -861,8 +882,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   // ── Message context menu ──────────────────────────────────────────────────
 
   void _showMessageMenu(MessageModel msg) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -871,7 +895,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           children: [
             const SizedBox(height: 8),
             Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300],
+                decoration: BoxDecoration(color: cc.border,
                     borderRadius: BorderRadius.circular(2))),
             // Emoji reaction strip
             if (!msg.isDeleted)
@@ -882,12 +906,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       .addReaction(msg.id, emoji);
                 },
               ),
-            const Divider(height: 1),
+            Divider(height: 1, color: cc.divider),
             if (!msg.isDeleted) ...[
               ListTile(
-                leading: const Icon(Icons.reply_rounded,
-                    color: Color(0xFF1976D2)),
-                title: const Text('Reply'),
+                leading: Icon(Icons.reply_rounded,
+                    color: primary),
+                title: Text('Reply', style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -896,9 +920,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ),
               if (msg.text != null && msg.text!.isNotEmpty)
                 ListTile(
-                  leading: const Icon(Icons.copy_rounded,
-                      color: Color(0xFF1976D2)),
-                  title: const Text('Copy'),
+                  leading: Icon(Icons.copy_rounded,
+                      color: primary),
+                  title: Text('Copy', style: TextStyle(color: cc.primaryText)),
                   onTap: () {
                     Navigator.pop(context);
                     Clipboard.setData(ClipboardData(text: msg.text!));
@@ -911,9 +935,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   msg.isStarred
                       ? Icons.star_rounded : Icons.star_border_rounded,
                   color: msg.isStarred
-                      ? const Color(0xFFFFC107) : const Color(0xFF1976D2),
+                      ? const Color(0xFFFFC107) : primary,
                 ),
-                title: Text(msg.isStarred ? 'Unstar' : 'Star'),
+                title: Text(msg.isStarred ? 'Unstar' : 'Star', style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   final vm = ref.read(
@@ -926,9 +950,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.forward_rounded,
-                    color: Color(0xFF1976D2)),
-                title: const Text('Forward'),
+                leading: Icon(Icons.forward_rounded,
+                    color: primary),
+                title: Text('Forward', style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   ForwardMessageSheet.show(context, messageIds: [msg.id]);
@@ -938,9 +962,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 leading: Icon(
                   msg.pinned != null
                       ? Icons.push_pin_outlined : Icons.push_pin_rounded,
-                  color: const Color(0xFF1976D2),
+                  color: primary,
                 ),
-                title: Text(msg.pinned != null ? 'Unpin' : 'Pin'),
+                title: Text(msg.pinned != null ? 'Unpin' : 'Pin', style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   final vm = ref.read(
@@ -954,9 +978,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ),
               if (msg.fromMe)
                 ListTile(
-                  leading: const Icon(Icons.info_outline_rounded,
-                      color: Color(0xFF1976D2)),
-                  title: const Text('Message Info'),
+                  leading: Icon(Icons.info_outline_rounded,
+                      color: primary),
+                  title: Text('Message Info', style: TextStyle(color: cc.primaryText)),
                   onTap: () {
                     Navigator.pop(context);
                     context.push(Routes.messageInfo
@@ -982,8 +1006,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   void _showDeleteOptions(MessageModel msg) {
+    final cc = context.cc;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -991,13 +1017,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
-            const Text('Delete Message',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text('Delete Message',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: cc.primaryText)),
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: Color(0xFFEF4444)),
-              title: const Text('Delete for Me'),
+              title: Text('Delete for Me', style: TextStyle(color: cc.primaryText)),
               onTap: () {
                 Navigator.pop(context);
                 ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -1008,7 +1034,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ListTile(
                 leading: const Icon(Icons.delete_sweep_rounded,
                     color: Color(0xFFEF4444)),
-                title: const Text('Delete for Everyone'),
+                title: Text('Delete for Everyone', style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -1057,6 +1083,7 @@ class _AttachOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -1071,7 +1098,7 @@ class _AttachOption extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF666666))),
+              style: TextStyle(fontSize: 12, color: cc.secondaryText)),
         ],
       ),
     );
@@ -1085,6 +1112,7 @@ class _DateDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     String label;
     try {
       final dt  = DateTime.parse(iso).toLocal();
@@ -1101,17 +1129,19 @@ class _DateDivider extends StatelessWidget {
       }
     } catch (_) { label = ''; }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.06),
+            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF666666))),
+              style: TextStyle(fontSize: 12, color: cc.secondaryText)),
         ),
       ),
     );
@@ -1124,21 +1154,25 @@ class _SystemMessage extends StatelessWidget {
   final MessageModel msg;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(msg.text ?? '',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
-                textAlign: TextAlign.center),
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Text(msg.text ?? '',
+              style: TextStyle(fontSize: 12, color: cc.secondaryText),
+              textAlign: TextAlign.center),
         ),
-      );
+      ),
+    );
+  }
 }
 
 // ── Message bubble ────────────────────────────────────────────────────────────
@@ -1152,12 +1186,14 @@ class _MessageBubble extends StatelessWidget {
   final VoidCallback onLongPress;
   final VoidCallback onReply;
 
-  static const _bubbleMe    = Color(0xFF1976D2);
-  static const _bubbleOther = Colors.white;
-
   @override
   Widget build(BuildContext context) {
     final isMe = msg.fromMe;
+    final cc = context.cc;
+    final bubbleColor = isMe ? cc.bubbleMe : cc.bubbleOther;
+    final textColor   = isMe ? cc.bubbleMeText : cc.bubbleOtherText;
+    final timeColor   = isMe ? cc.bubbleMeText.withOpacity(0.7) : cc.secondaryText;
+
     return GestureDetector(
       onLongPress: onLongPress,
       child: Padding(
@@ -1179,7 +1215,7 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isMe ? _bubbleMe : _bubbleOther,
+                  color: bubbleColor,
                   borderRadius: BorderRadius.only(
                     topLeft:     const Radius.circular(16),
                     topRight:    const Radius.circular(16),
@@ -1198,12 +1234,12 @@ class _MessageBubble extends StatelessWidget {
                           style: TextStyle(fontSize: 14,
                               fontStyle: FontStyle.italic,
                               color: isMe
-                                  ? Colors.white70
-                                  : const Color(0xFF9AA6B8)))
+                                  ? cc.bubbleMeText.withOpacity(0.7)
+                                  : cc.secondaryText))
                     else if (msg.contentType == ContentType.text)
                       Text(msg.text ?? '',
                           style: TextStyle(fontSize: 15,
-                              color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+                              color: textColor,
                               height: 1.4))
                     else
                       _MediaContent(msg: msg, isMe: isMe),
@@ -1214,9 +1250,7 @@ class _MessageBubble extends StatelessWidget {
                       children: [
                         Text(_formatTime(msg.createdAt),
                             style: TextStyle(fontSize: 11,
-                                color: isMe
-                                    ? Colors.white70
-                                    : const Color(0xFF9AA6B8))),
+                                color: timeColor)),
                         if (isMe) ...[
                           const SizedBox(width: 3),
                           _StatusIcon(status: msg.status),
@@ -1249,22 +1283,26 @@ class _InBubbleReply extends StatelessWidget {
   final bool isMe;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isMe
-              ? Colors.white.withOpacity(0.15)
-              : const Color(0xFFF0F4F8),
-          borderRadius: BorderRadius.circular(10),
-          border: const Border(
-              left: BorderSide(color: Color(0xFF1976D2), width: 3)),
-        ),
-        child: Text(reply.text ?? '📎 Media',
-            maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12,
-                color: isMe ? Colors.white70 : const Color(0xFF666666))),
-      );
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isMe
+            ? Colors.white.withOpacity(0.15)
+            : cc.pageBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(
+            left: BorderSide(color: isMe ? Colors.white : primary, width: 3)),
+      ),
+      child: Text(reply.text ?? '📎 Media',
+          maxLines: 2, overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12,
+              color: isMe ? Colors.white70 : cc.secondaryText)),
+    );
+  }
 }
 
 // ── Media content ─────────────────────────────────────────────────────────────
@@ -1275,6 +1313,9 @@ class _MediaContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+
     switch (msg.contentType) {
       case ContentType.image:
         return GestureDetector(
@@ -1287,13 +1328,13 @@ class _MediaContent extends StatelessWidget {
                     width: 220, height: 220, fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
                         width: 220, height: 220,
-                        color: const Color(0xFFEEEEEE),
-                        child: const Center(
-                            child: CircularProgressIndicator())),
+                        color: cc.surfaceBackground,
+                        child: Center(
+                            child: CircularProgressIndicator(color: primary))),
                     errorWidget: (_, __, ___) =>
-                        _placeholder(Icons.broken_image_rounded),
+                        _placeholder(Icons.broken_image_rounded, cc),
                   )
-                : _placeholder(Icons.image_rounded),
+                : _placeholder(Icons.image_rounded, cc),
           ),
         );
 
@@ -1314,9 +1355,9 @@ class _MediaContent extends StatelessWidget {
                         imageUrl: msg.mediaUrl!,
                         width: 220, height: 150, fit: BoxFit.cover,
                         errorWidget: (_, __, ___) =>
-                            _placeholder(Icons.videocam_rounded),
+                            _placeholder(Icons.videocam_rounded, cc),
                       )
-                    : _placeholder(Icons.videocam_rounded),
+                    : _placeholder(Icons.videocam_rounded, cc),
               ),
               Container(
                 width: 48, height: 48,
@@ -1344,14 +1385,14 @@ class _MediaContent extends StatelessWidget {
             decoration: BoxDecoration(
               color: isMe
                   ? Colors.white.withOpacity(0.15)
-                  : const Color(0xFFF0F4F8),
+                  : cc.surfaceBackground,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.insert_drive_file_rounded,
-                    color: isMe ? Colors.white : const Color(0xFF1976D2),
+                    color: isMe ? Colors.white : primary,
                     size: 28),
                 const SizedBox(width: 8),
                 Flexible(
@@ -1361,7 +1402,7 @@ class _MediaContent extends StatelessWidget {
                       Text(msg.mediaUrl?.split('/').last ?? 'file',
                           style: TextStyle(fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: isMe ? Colors.white : Colors.black87),
+                              color: isMe ? Colors.white : cc.primaryText),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                       if (msg.mediaSize != null)
                         Text(
@@ -1369,13 +1410,13 @@ class _MediaContent extends StatelessWidget {
                             style: TextStyle(fontSize: 11,
                                 color: isMe
                                     ? Colors.white70
-                                    : const Color(0xFF888888))),
+                                    : cc.secondaryText)),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
                 Icon(Icons.download_rounded,
-                    color: isMe ? Colors.white70 : const Color(0xFF1976D2),
+                    color: isMe ? Colors.white70 : primary,
                     size: 20),
               ],
             ),
@@ -1394,10 +1435,10 @@ class _MediaContent extends StatelessWidget {
             decoration: BoxDecoration(
               color: isMe
                   ? Colors.white.withOpacity(0.15)
-                  : const Color(0xFFF0F4F8),
+                  : cc.surfaceBackground,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                  color: isMe ? Colors.white24 : const Color(0xFFDDDDDD)),
+                  color: isMe ? Colors.white24 : cc.border),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1409,7 +1450,7 @@ class _MediaContent extends StatelessWidget {
                     style: TextStyle(fontSize: 12,
                         color: isMe
                             ? Colors.white70
-                            : const Color(0xFF1976D2))),
+                            : primary)),
               ],
             ),
           ),
@@ -1418,7 +1459,7 @@ class _MediaContent extends StatelessWidget {
       default:
         return Text(msg.text ?? '',
             style: TextStyle(
-                color: isMe ? Colors.white : const Color(0xFF1A1A2E)));
+                color: isMe ? Colors.white : cc.primaryText));
     }
   }
 
@@ -1440,16 +1481,16 @@ class _MediaContent extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(IconData icon) => Container(
+  Widget _placeholder(IconData icon, CircuitChatColors cc) => Container(
         width: 200, height: 140,
         decoration: BoxDecoration(
           color: isMe
               ? Colors.white.withOpacity(0.15)
-              : const Color(0xFFF0F4F8),
+              : cc.surfaceBackground,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 48,
-            color: isMe ? Colors.white38 : const Color(0xFFCCCCCC)),
+            color: isMe ? Colors.white38 : cc.secondaryText),
       );
 }
 
@@ -1469,6 +1510,8 @@ class _AudioBubbleState extends State<_AudioBubble> {
   @override
   Widget build(BuildContext context) {
     final isMe = widget.isMe;
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final dur  = widget.msg.mediaDuration;
     final label = dur != null
         ? '${(dur ~/ 60).toString().padLeft(2, '0')}:'
@@ -1480,7 +1523,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
       decoration: BoxDecoration(
         color: isMe
             ? Colors.white.withOpacity(0.15)
-            : const Color(0xFFF0F4F8),
+            : cc.surfaceBackground,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -1494,7 +1537,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
             child: Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: isMe ? Colors.white24 : const Color(0xFF1976D2),
+                color: isMe ? Colors.white24 : primary,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -1516,7 +1559,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
                   decoration: BoxDecoration(
                     color: isMe
                         ? Colors.white54
-                        : const Color(0xFF1976D2),
+                        : primary,
                     borderRadius: BorderRadius.circular(1),
                   ),
                 );
@@ -1526,7 +1569,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
           const SizedBox(width: 8),
           Text(label,
               style: TextStyle(fontSize: 11,
-                  color: isMe ? Colors.white70 : const Color(0xFF888888))),
+                  color: isMe ? Colors.white70 : cc.secondaryText)),
         ],
       ),
     );
@@ -1542,31 +1585,34 @@ class _PinnedBanner extends StatelessWidget {
   final VoidCallback onDismiss;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
         onTap: onTap,
         child: Container(
-          color: Colors.white,
+          color: cc.cardBackground,
           padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
           child: Row(
             children: [
               Container(
                 width: 3, height: 32,
                 decoration: BoxDecoration(
-                    color: const Color(0xFF1976D2),
+                    color: primary,
                     borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.push_pin_rounded,
-                  size: 14, color: Color(0xFF1976D2)),
+              Icon(Icons.push_pin_rounded,
+                  size: 14, color: primary),
               const SizedBox(width: 6),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Pinned Message',
+                    Text('Pinned Message',
                         style: TextStyle(fontSize: 11,
-                            color: Color(0xFF1976D2),
+                            color: primary,
                             fontWeight: FontWeight.w600)),
                     Text(
                       message.text ??
@@ -1576,15 +1622,15 @@ class _PinnedBanner extends StatelessWidget {
                                   ? '🎵 Audio'
                                   : '📎 Attachment'),
                       maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF444444)),
+                      style: TextStyle(
+                          fontSize: 12, color: cc.primaryText),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded,
-                    size: 16, color: Color(0xFF888888)),
+                icon: Icon(Icons.close_rounded,
+                    size: 16, color: cc.secondaryText),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: onDismiss,
@@ -1593,6 +1639,7 @@ class _PinnedBanner extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 // ── Emoji reaction strip ──────────────────────────────────────────────────────
@@ -1654,6 +1701,7 @@ class _ReactionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     final grouped = <String, int>{};
     for (final r in msg.reactions) {
       grouped[r.reaction] = (grouped[r.reaction] ?? 0) + 1;
@@ -1665,14 +1713,14 @@ class _ReactionsRow extends StatelessWidget {
         children: grouped.entries.map((e) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cc.cardBackground,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFEEEEEE)),
+            border: Border.all(color: cc.border),
             boxShadow: [BoxShadow(
                 color: Colors.black.withOpacity(0.04), blurRadius: 2)],
           ),
           child: Text('${e.key} ${e.value}',
-              style: const TextStyle(fontSize: 12)),
+              style: TextStyle(fontSize: 12, color: cc.primaryText)),
         )).toList(),
       ),
     );
@@ -1709,18 +1757,21 @@ class _TypingDotState extends State<_TypingDot>
   void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return AnimatedBuilder(
         animation: _anim,
         builder: (_, __) => Transform.translate(
           offset: Offset(0, _anim.value),
           child: Container(
             width: 7, height: 7,
             margin: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: const BoxDecoration(
-                color: Color(0xFF9AA6B8), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: cc.secondaryText, shape: BoxShape.circle),
           ),
         ),
       );
+  }
 }
 
 // ── Chat option actions (mirrors RN components/options.js) ────────────────────
@@ -1752,6 +1803,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cc       = context.cc;
     final isGroup  = chat.type == ChatType.group;
 
     return SafeArea(
@@ -1764,7 +1816,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
             child: Container(
               width: 36, height: 4,
               decoration: BoxDecoration(
-                  color: const Color(0xFFCCCCCC),
+                  color: cc.border,
                   borderRadius: BorderRadius.circular(2)),
             ),
           ),
@@ -1880,8 +1932,8 @@ class _ChatOptionsSheet extends ConsumerWidget {
               child: OutlinedButton(
                 onPressed: onClose,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF888888),
-                  side: const BorderSide(color: Color(0xFFDDDDDD)),
+                  foregroundColor: cc.secondaryText,
+                  side: BorderSide(color: cc.border),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
@@ -1911,7 +1963,8 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF1A1A2E);
+    final cc = context.cc;
+    final c = color ?? cc.primaryText;
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: c, size: 22),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/user_model.dart';
 
@@ -100,17 +101,19 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final state = ref.watch(_newChatProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: cc.pageBackground,
+        foregroundColor: cc.primaryText,
         elevation: 0.5,
-        title: const Text(
+        title: Text(
           'New Chat',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: cc.primaryText),
         ),
       ),
       body: Column(
@@ -120,21 +123,23 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: TextField(
               controller: _searchCtrl,
+              style: TextStyle(color: cc.primaryText),
               decoration: InputDecoration(
                 hintText: 'Search contacts…',
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: Color(0xFF888888)),
+                hintStyle: TextStyle(color: cc.secondaryText, fontSize: 14),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: cc.secondaryText),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            color: Color(0xFF888888)),
+                        icon: Icon(Icons.close_rounded,
+                            color: cc.secondaryText),
                         onPressed: () {
                           _searchCtrl.clear();
                         },
                       )
                     : null,
                 filled: true,
-                fillColor: const Color(0xFFF0F0F0),
+                fillColor: cc.searchBackground,
                 contentPadding: const EdgeInsets.symmetric(
                     vertical: 10, horizontal: 14),
                 border: OutlineInputBorder(
@@ -147,19 +152,19 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           // List
           Expanded(
             child: state.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: primary))
                 : state.users.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.person_search_rounded,
                                 size: 56,
-                                color: Color(0xFFCCCCCC)),
-                            SizedBox(height: 12),
+                                color: cc.secondaryText),
+                            const SizedBox(height: 12),
                             Text('No contacts found',
                                 style: TextStyle(
-                                    color: Color(0xFFAAAAAA),
+                                    color: cc.secondaryText,
                                     fontSize: 15)),
                           ],
                         ),
@@ -170,9 +175,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                           final chat = state.users[i];
                           return _ContactTile(
                             chat: chat,
-                            onTap: () => context.go(
-                              Routes.chatDetail.replaceFirst(
-                                  ':chatId', chat.id),
+                            onTap: () => context.push(
+                              Routes.chatDetailPath(chat.id),
                               extra: chat,
                             ),
                           );
@@ -195,12 +199,13 @@ class _ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return ListTile(
       onTap: onTap,
-      leading: _buildAvatar(),
+      leading: _buildAvatar(context),
       title: Text(
         chat.name ?? 'Unknown',
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        style: TextStyle(fontWeight: FontWeight.w500, color: cc.primaryText),
       ),
       subtitle: chat.members.isNotEmpty &&
               chat.members.first.bio != null
@@ -208,8 +213,8 @@ class _ContactTile extends StatelessWidget {
               chat.members.first.bio!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 12, color: Color(0xFF888888)),
+              style: TextStyle(
+                  fontSize: 12, color: cc.secondaryText),
             )
           : null,
       trailing: chat.isOnline
@@ -221,7 +226,8 @@ class _ContactTile extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final url = chat.avatar;
     if (url != null && url.isNotEmpty) {
       return CircleAvatar(
@@ -231,7 +237,7 @@ class _ContactTile extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 22,
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: primary,
       child: Text(
         (chat.name ?? '?')[0].toUpperCase(),
         style: const TextStyle(

@@ -6,6 +6,7 @@ import '../../../data/models/chat_model.dart';
 import '../../chat/viewmodel/chat_list_viewmodel.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/theme/app_theme.dart';
 
 /// Shows a bottom sheet listing all chats.
 /// The caller provides either message IDs or a text link to forward.
@@ -66,7 +67,9 @@ class _ForwardMessageSheetState
 
   @override
   Widget build(BuildContext context) {
-    final chats  = ref.watch(chatListViewModelProvider).chats;
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    final chats = ref.watch(chatListViewModelProvider).chats;
     final filtered = _query.isEmpty
         ? chats
         : chats
@@ -78,101 +81,109 @@ class _ForwardMessageSheetState
       expand: false,
       initialChildSize: 0.7,
       maxChildSize: 0.95,
-      builder: (_, scrollCtrl) => Column(
-        children: [
-          // Handle
-          const SizedBox(height: 8),
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                  color: const Color(0xFFCCCCCC),
-                  borderRadius: BorderRadius.circular(2)),
+      builder: (_, scrollCtrl) => Container(
+        color: cc.pageBackground,
+        child: Column(
+          children: [
+            // Handle
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                    color: cc.border,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('Forward to',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 17)),
-                ),
-                if (_selected.isNotEmpty)
-                  ElevatedButton(
-                    onPressed: _sending ? null : _forward,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1976D2),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
-                    ),
-                    child: _sending
-                        ? const SizedBox(
-                            width: 16, height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : Text('Send (${_selected.length})'),
+            const SizedBox(height: 8),
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('Forward to',
+                        style: TextStyle(
+                            color: cc.primaryText,
+                            fontWeight: FontWeight.w700, fontSize: 17)),
                   ),
-              ],
+                  if (_selected.isNotEmpty)
+                    ElevatedButton(
+                      onPressed: _sending ? null : _forward,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                      ),
+                      child: _sending
+                          ? const SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : Text('Send (${_selected.length})'),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          // Search
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: 'Search chats…',
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: Color(0xFF888888)),
-                filled: true,
-                fillColor: const Color(0xFFF0F0F0),
-                contentPadding: const EdgeInsets.symmetric(
-                    vertical: 8, horizontal: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+            const SizedBox(height: 8),
+            // Search
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: TextField(
+                controller: _searchCtrl,
+                style: TextStyle(color: cc.primaryText),
+                decoration: InputDecoration(
+                  hintText: 'Search chats…',
+                  hintStyle: TextStyle(color: cc.secondaryText),
+                  prefixIcon: Icon(Icons.search_rounded,
+                      color: cc.secondaryText),
+                  filled: true,
+                  fillColor: cc.searchBackground,
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          // List
-          Expanded(
-            child: ListView.builder(
-              controller: scrollCtrl,
-              itemCount: filtered.length,
-              itemBuilder: (_, i) {
-                final chat     = filtered[i];
-                final isSelected = _selected.contains(chat.id);
-                return ListTile(
-                  onTap: () => setState(() {
-                    if (isSelected) {
-                      _selected.remove(chat.id);
-                    } else {
-                      _selected.add(chat.id);
-                    }
-                  }),
-                  leading: _Avatar(url: chat.avatar, name: chat.name ?? '?'),
-                  title: Text(chat.name ?? 'Unknown',
-                      style: const TextStyle(fontWeight: FontWeight.w500)),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle_rounded,
-                          color: Color(0xFF1976D2))
-                      : const Icon(Icons.radio_button_unchecked_rounded,
-                          color: Color(0xFFCCCCCC)),
-                );
-              },
+            const SizedBox(height: 8),
+            // List
+            Expanded(
+              child: ListView.builder(
+                controller: scrollCtrl,
+                itemCount: filtered.length,
+                itemBuilder: (_, i) {
+                  final chat     = filtered[i];
+                  final isSelected = _selected.contains(chat.id);
+                  return ListTile(
+                    onTap: () => setState(() {
+                      if (isSelected) {
+                        _selected.remove(chat.id);
+                      } else {
+                        _selected.add(chat.id);
+                      }
+                    }),
+                    leading: _Avatar(url: chat.avatar, name: chat.name ?? '?'),
+                    title: Text(chat.name ?? 'Unknown',
+                        style: TextStyle(
+                            color: cc.primaryText,
+                            fontWeight: FontWeight.w500)),
+                    trailing: isSelected
+                        ? Icon(Icons.check_circle_rounded,
+                            color: primary)
+                        : Icon(Icons.radio_button_unchecked_rounded,
+                            color: cc.secondaryText),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -234,7 +245,7 @@ class _Avatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 22,
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: Theme.of(context).colorScheme.primary,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : '?',
         style: const TextStyle(

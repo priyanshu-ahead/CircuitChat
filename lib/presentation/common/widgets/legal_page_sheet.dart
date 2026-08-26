@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/theme/app_theme.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -39,11 +40,12 @@ class LegalPageSheet {
     required String pageKey,
     required String title,
   }) {
+    final cc = context.cc;
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(0)),
       ),
@@ -59,6 +61,8 @@ class _LegalPageContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final async = ref.watch(_legalPageProvider(pageKey));
 
     return DraggableScrollableSheet(
@@ -66,82 +70,87 @@ class _LegalPageContent extends ConsumerWidget {
       initialChildSize: 1.0,
       maxChildSize: 1.0,
       minChildSize: 1.0,
-      builder: (_, scrollCtrl) => Column(
-        children: [
-          // ── Header ─────────────────────────────────────────────────────
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
+      builder: (_, scrollCtrl) => Container(
+        color: cc.pageBackground,
+        child: Column(
+          children: [
+            // ── Header ─────────────────────────────────────────────────────
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: cc.primaryText,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        color: Color(0xFF888888)),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-
-          // ── Content ────────────────────────────────────────────────────
-          Expanded(
-            child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error:   (_, __) => const Center(
-                child: Text(
-                  'Failed to load content.',
-                  style: TextStyle(color: Color(0xFF888888)),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded,
+                          color: cc.secondaryText),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
               ),
-              data: (html) => html.trim().isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No content available.',
-                        style: TextStyle(color: Color(0xFF888888)),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      controller: scrollCtrl,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Html(
-                        data: html,
-                        style: {
-                          'body': Style(
-                            fontSize:  FontSize(14),
-                            lineHeight: const LineHeight(1.6),
-                            color: const Color(0xFF333333),
-                          ),
-                          'h2': Style(
-                            fontSize: FontSize(18),
-                            fontWeight: FontWeight.w700,
-                          ),
-                          'h3': Style(
-                            fontSize: FontSize(16),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          'a': Style(
-                            color: const Color(0xFF1976D2),
-                          ),
-                        },
-                      ),
-                    ),
             ),
-          ),
-        ],
+            Divider(height: 1, color: cc.divider),
+
+            // ── Content ────────────────────────────────────────────────────
+            Expanded(
+              child: async.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error:   (_, __) => Center(
+                  child: Text(
+                    'Failed to load content.',
+                    style: TextStyle(color: cc.secondaryText),
+                  ),
+                ),
+                data: (html) => html.trim().isEmpty
+                    ? Center(
+                        child: Text(
+                          'No content available.',
+                          style: TextStyle(color: cc.secondaryText),
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        controller: scrollCtrl,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Html(
+                          data: html,
+                          style: {
+                            'body': Style(
+                              fontSize:  FontSize(14),
+                              lineHeight: const LineHeight(1.6),
+                              color: cc.primaryText,
+                            ),
+                            'h2': Style(
+                              fontSize: FontSize(18),
+                              fontWeight: FontWeight.w700,
+                              color: cc.primaryText,
+                            ),
+                            'h3': Style(
+                              fontSize: FontSize(16),
+                              fontWeight: FontWeight.w600,
+                              color: cc.primaryText,
+                            ),
+                            'a': Style(
+                              color: primary,
+                            ),
+                          },
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -51,8 +52,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF2F7),
+      backgroundColor: cc.surfaceBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -60,18 +62,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cc.cardBackground,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.07),
+                      color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.07),
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-                child: _emailSent ? _buildSentView() : _buildFormView(),
+                child: _emailSent ? _buildSentView(context) : _buildFormView(context),
               ),
             ],
           ),
@@ -80,7 +82,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildFormView() {
+  Widget _buildFormView(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Form(
       key: _formKey,
       child: Column(
@@ -89,10 +93,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           Center(
             child: Text(
               AppStrings.forgotPasswordTitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                color: cc.primaryText,
               ),
             ),
           ),
@@ -101,7 +105,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             child: Text(
               AppStrings.forgotPasswordDescription,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 13, color: cc.secondaryText),
             ),
           ),
           const SizedBox(height: 28),
@@ -111,8 +115,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
+            style: TextStyle(color: cc.primaryText),
             onFieldSubmitted: (_) => _onSendEmail(),
-            decoration: _inputDecoration(AppStrings.enterYourEmail),
+            decoration: _inputDecoration(context, AppStrings.enterYourEmail),
             validator: (v) {
               if (v == null || v.trim().isEmpty) {
                 return AppStrings.emailRequiredError;
@@ -155,7 +160,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _onSendEmail,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1976D2),
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -184,10 +189,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           Center(
             child: TextButton(
               onPressed: () => context.go(Routes.login),
-              child: const Text(
+              child: Text(
                 AppStrings.backToLogin,
                 style: TextStyle(
-                  color: Color(0xFF1976D2),
+                  color: primary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -199,7 +204,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildSentView() {
+  Widget _buildSentView(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -216,10 +223,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         Text(
           AppStrings.emailSentSuccessfully,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
+            color: cc.primaryText,
             height: 1.5,
           ),
         ),
@@ -230,7 +237,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           child: ElevatedButton(
             onPressed: () => context.go(Routes.login),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
+              backgroundColor: primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -250,23 +257,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
+  InputDecoration _inputDecoration(BuildContext context, String hint) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+        hintStyle: TextStyle(color: cc.secondaryText, fontSize: 14),
         filled: true,
-        fillColor: const Color(0xFFF2F4F8),
+        fillColor: cc.inputBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: cc.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: cc.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF1976D2), width: 1.5),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -274,12 +283,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       );
+  }
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -288,13 +297,14 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return RichText(
       text: TextSpan(
         text: '$label: ',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A2E),
+          color: cc.primaryText,
         ),
         children: const [
           TextSpan(

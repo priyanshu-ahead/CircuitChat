@@ -10,6 +10,8 @@ import 'core/di/providers.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/storage/shared_prefs.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'presentation/common/widgets/connectivity_banner.dart';
 
 // ── FCM background handler (top-level, required by Firebase) ─────────────────
@@ -53,32 +55,17 @@ class CircuitChatApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the persisted theme mode — rebuilds app when toggled
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       title: 'CircuitChat',
       debugShowCheckedModeBanner: false,
-
-      // navigatorKey lets NotificationService.instance navigate from outside
-      // the widget tree (e.g. when a notification is tapped while the app is
-      // backgrounded / terminated).
-      // Note: MaterialApp.router manages its own navigator internally; we
-      // expose the GoRouter's navigatorKey via appRouter.routerDelegate.
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1976D2)),
-        fontFamily: 'Roboto',
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF1A1A2E),
-          elevation: 0,
-          centerTitle: false,
-        ),
-      ),
+      themeMode: themeMode,
+      theme:     AppTheme.light,
+      darkTheme: AppTheme.dark,
       routerConfig: appRouter,
       builder: (context, child) {
-        // 1. Wrap every screen with the global connectivity banner.
-        // 2. Capture the BuildContext so NotificationService can navigate.
         return ConnectivityBanner(
           child: _NavKeyCapture(child: child ?? const SizedBox.shrink()),
         );

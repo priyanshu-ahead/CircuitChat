@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/user_model.dart';
 import '../../chat/viewmodel/active_users_viewmodel.dart';
 
@@ -14,14 +15,15 @@ class ActiveUsersCarousel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cc = context.cc;
     final users = ref.watch(visibleActiveUsersProvider);
     if (users.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: cc.pageBackground,
         border: Border(
-          bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+          bottom: BorderSide(color: cc.border, width: 1),
         ),
       ),
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -59,6 +61,8 @@ class _ActiveUserItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -73,7 +77,7 @@ class _ActiveUserItem extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: CircleAvatar(
-                      backgroundColor: const Color(0xFFDDE4EF),
+                      backgroundColor: cc.surfaceBackground,
                       backgroundImage:
                           user.avatar != null && user.avatar!.isNotEmpty
                               ? CachedNetworkImageProvider(user.avatar!)
@@ -83,8 +87,8 @@ class _ActiveUserItem extends StatelessWidget {
                               user.name.isNotEmpty
                                   ? user.name[0].toUpperCase()
                                   : '?',
-                              style: const TextStyle(
-                                color: Color(0xFF1976D2),
+                              style: TextStyle(
+                                color: primary,
                                 fontWeight: FontWeight.w600,
                               ),
                             )
@@ -100,7 +104,7 @@ class _ActiveUserItem extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: _statusColor,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1),
+                        border: Border.all(color: cc.pageBackground, width: 1.5),
                       ),
                     ),
                   ),
@@ -110,7 +114,7 @@ class _ActiveUserItem extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               user.name,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF1A1A2E)),
+              style: TextStyle(fontSize: 10, color: cc.primaryText),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,

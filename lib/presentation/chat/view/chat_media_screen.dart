@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/message_model.dart';
 
@@ -163,23 +164,25 @@ class _ChatMediaScreenState extends ConsumerState<ChatMediaScreen>
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final allState = ref.watch(_chatMediaProvider(widget.chat));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: cc.pageBackground,
+        foregroundColor: cc.primaryText,
         elevation: 0.5,
-        title: const Text(
+        title: Text(
           'Media, Links & Docs',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: cc.primaryText),
         ),
         bottom: TabBar(
           controller: _tabCtrl,
-          labelColor: const Color(0xFF1976D2),
-          unselectedLabelColor: const Color(0xFF888888),
-          indicatorColor: const Color(0xFF1976D2),
+          labelColor: primary,
+          unselectedLabelColor: cc.secondaryText,
+          indicatorColor: primary,
           tabs: const [
             Tab(text: 'Media'),
             Tab(text: 'Links'),
@@ -223,8 +226,10 @@ class _MediaGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     if (state.isLoading && state.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(color: primary));
     }
     if (!state.isLoading && state.items.isEmpty) {
       return const _EmptyView(
@@ -255,9 +260,9 @@ class _MediaGrid extends StatelessWidget {
         itemCount: days.length + (state.isLoading ? 1 : 0),
         itemBuilder: (_, i) {
           if (i == days.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator(color: primary)),
             );
           }
           final day = days[i];
@@ -269,9 +274,9 @@ class _MediaGrid extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
                 child: Text(
                   _formatDay(day),
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF888888),
+                      color: cc.secondaryText,
                       fontWeight: FontWeight.w500),
                 ),
               ),
@@ -302,6 +307,7 @@ class _MediaCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     final isVideo = message.contentType == ContentType.video;
     return Stack(
       fit: StackFit.expand,
@@ -311,12 +317,12 @@ class _MediaCell extends StatelessWidget {
             imageUrl: message.mediaUrl!,
             fit: BoxFit.cover,
             placeholder: (_, __) =>
-                const ColoredBox(color: Color(0xFFEEEEEE)),
+                ColoredBox(color: cc.surfaceBackground),
             errorWidget: (_, __, ___) =>
-                const ColoredBox(color: Color(0xFFEEEEEE)),
+                ColoredBox(color: cc.surfaceBackground),
           )
         else
-          const ColoredBox(color: Color(0xFFEEEEEE)),
+          ColoredBox(color: cc.surfaceBackground),
         if (isVideo)
           const Center(
             child: Icon(Icons.play_circle_filled_rounded,
@@ -336,8 +342,10 @@ class _LinksList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     if (state.isLoading && state.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(color: primary));
     }
     if (!state.isLoading && state.items.isEmpty) {
       return const _EmptyView(
@@ -357,32 +365,32 @@ class _LinksList extends StatelessWidget {
       child: ListView.separated(
         itemCount: state.items.length + (state.isLoading ? 1 : 0),
         separatorBuilder: (_, __) =>
-            const Divider(height: 1, indent: 16, endIndent: 16),
+            Divider(height: 1, indent: 16, endIndent: 16, color: cc.divider),
         itemBuilder: (_, i) {
           if (i == state.items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator(color: primary)),
             );
           }
           final msg = state.items[i];
           final url = msg.text ?? msg.mediaUrl ?? '';
           return ListTile(
-            leading: const Icon(Icons.link_rounded,
-                color: Color(0xFF1976D2)),
+            leading: Icon(Icons.link_rounded,
+                color: primary),
             title: Text(
               url,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  color: Color(0xFF1976D2),
+              style: TextStyle(
+                  color: primary,
                   decoration: TextDecoration.underline,
                   fontSize: 13),
             ),
             subtitle: Text(
               _formatDate(msg.createdAt),
-              style: const TextStyle(
-                  fontSize: 11, color: Color(0xFF888888)),
+              style: TextStyle(
+                  fontSize: 11, color: cc.secondaryText),
             ),
             onTap: () async {
               final uri = Uri.tryParse(url);
@@ -404,8 +412,10 @@ class _DocsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     if (state.isLoading && state.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(color: primary));
     }
     if (!state.isLoading && state.items.isEmpty) {
       return const _EmptyView(
@@ -426,12 +436,12 @@ class _DocsList extends StatelessWidget {
       child: ListView.separated(
         itemCount: state.items.length + (state.isLoading ? 1 : 0),
         separatorBuilder: (_, __) =>
-            const Divider(height: 1, indent: 64, endIndent: 16),
+            Divider(height: 1, indent: 64, endIndent: 16, color: cc.divider),
         itemBuilder: (_, i) {
           if (i == state.items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator(color: primary)),
             );
           }
           final msg = state.items[i];
@@ -444,24 +454,25 @@ class _DocsList extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
+                color: primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.insert_drive_file_rounded,
-                  color: Color(0xFF1976D2)),
+              child: Icon(Icons.insert_drive_file_rounded,
+                  color: primary),
             ),
             title: Text(
               fileName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: cc.primaryText),
             ),
             subtitle: Text(
               '${_formatDate(msg.createdAt)}${sizeKb.isNotEmpty ? '  •  $sizeKb' : ''}',
-              style: const TextStyle(
-                  fontSize: 11, color: Color(0xFF888888)),
+              style: TextStyle(
+                  fontSize: 11, color: cc.secondaryText),
             ),
-            trailing: const Icon(Icons.download_outlined,
-                color: Color(0xFF888888)),
+            trailing: Icon(Icons.download_outlined,
+                color: cc.secondaryText),
             onTap: () async {
               final url = msg.mediaUrl;
               if (url != null) {
@@ -485,15 +496,16 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 56, color: const Color(0xFFCCCCCC)),
+          Icon(icon, size: 56, color: cc.secondaryText),
           const SizedBox(height: 12),
           Text(label,
-              style: const TextStyle(
-                  color: Color(0xFFAAAAAA), fontSize: 15)),
+              style: TextStyle(
+                  color: cc.secondaryText, fontSize: 15)),
         ],
       ),
     );

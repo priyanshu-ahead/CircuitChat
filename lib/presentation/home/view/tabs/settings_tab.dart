@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../auth/viewmodel/auth_viewmodel.dart';
 
-// ── Dark-mode provider ─────────────────────────────────────────────────────────
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+// themeModeProvider lives in core/theme/theme_provider.dart — do NOT re-declare here.
 
 class SettingsTab extends ConsumerStatefulWidget {
   const SettingsTab({super.key});
@@ -42,8 +43,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Future<void> _showLanguagePicker() async {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final chosen = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => Column(
@@ -53,21 +57,24 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           Container(
               width: 36, height: 4,
               decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: cc.border,
                   borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 12),
-          const Text('Select Language',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-          const Divider(),
+          Text('Select Language',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: cc.primaryText)),
+          Divider(color: cc.divider),
           Flexible(
             child: ListView(
               shrinkWrap: true,
               children: _languages
                   .map((lang) => ListTile(
-                        title: Text(lang),
+                        title: Text(lang, style: TextStyle(color: cc.primaryText)),
                         trailing: lang == _selectedLanguage
-                            ? const Icon(Icons.check_rounded,
-                                color: Color(0xFF1976D2))
+                            ? Icon(Icons.check_rounded,
+                                color: primary)
                             : null,
                         onTap: () => Navigator.pop(context, lang),
                       ))
@@ -82,6 +89,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Future<void> _confirmDeleteAccount() async {
+    final cc = context.cc;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -92,7 +100,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Delete',
@@ -108,24 +116,25 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final user = ref.watch(authViewModelProvider).user;
     final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
-    const blue = Color(0xFF1976D2);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: cc.surfaceBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
             // ── Header ────────────────────────────────────────────────────────
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Text('Settings',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A2E))),
+                      color: cc.primaryText)),
             ),
 
             // ── Profile card ──────────────────────────────────────────────────
@@ -135,20 +144,20 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 leading: _buildAvatar(user?.avatar, user?.name ?? ''),
                 title: Text(user?.name ?? 'User',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
-                        color: Color(0xFF1A1A2E))),
+                        color: cc.primaryText)),
                 subtitle: Text(
                   user?.bio?.isNotEmpty == true
                       ? user!.bio!
                       : (user?.email ?? ''),
-                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                  style: TextStyle(fontSize: 13, color: cc.secondaryText),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded,
-                    color: Color(0xFFAAAAAA)),
+                trailing: Icon(Icons.chevron_right_rounded,
+                    color: cc.secondaryText),
                 onTap: () => context.push(Routes.editProfile),
               ),
             ),
@@ -161,7 +170,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 children: [
                   _Tile(
                       icon: Icons.edit_outlined,
-                      iconColor: blue,
+                      iconColor: primary,
                       label: 'Edit Profile',
                       onTap: () => context.push(Routes.editProfile)),
                   _Tile(
@@ -188,11 +197,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
                   // Join Group — inline input matching RN enableInput toggle
                   if (_joinGroupInputVisible)
-                    _joinGroupRow(blue)
+                    _joinGroupRow(primary)
                   else
                     _Tile(
                         icon: Icons.group_outlined,
-                        iconColor: blue,
+                        iconColor: primary,
                         label: 'Join Group',
                         onTap: () =>
                             setState(() => _joinGroupInputVisible = true)),
@@ -202,8 +211,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                       iconColor: const Color(0xFF009688),
                       label: 'Language',
                       trailing: Text(_selectedLanguage,
-                          style: const TextStyle(
-                              fontSize: 13, color: Color(0xFF888888))),
+                          style: TextStyle(
+                              fontSize: 13, color: cc.secondaryText)),
                       onTap: _showLanguagePicker),
                   _Tile(
                       icon: Icons.lock_reset_outlined,
@@ -237,23 +246,26 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF37474F).withValues(alpha: 0.12),
+                    color: isDark ? Colors.white12 : const Color(0xFF37474F).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.dark_mode_outlined,
-                      color: Color(0xFF37474F), size: 19),
+                  child: Icon(
+                      isDark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      color: isDark ? const Color(0xFFFFC107) : const Color(0xFF37474F),
+                      size: 19),
                 ),
-                title: const Text('Dark Mode',
+                title: Text('Dark Mode',
                     style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF1A1A2E),
+                        color: cc.primaryText,
                         fontWeight: FontWeight.w500)),
                 trailing: Switch(
                   value: isDark,
-                  activeColor: blue,
-                  onChanged: (val) =>
-                      ref.read(themeModeProvider.notifier).state =
-                          val ? ThemeMode.dark : ThemeMode.light,
+                  activeColor: primary,
+                  onChanged: (_) =>
+                      ref.read(themeModeProvider.notifier).toggle(),
                 ),
               ),
             ),
@@ -285,7 +297,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     );
   }
 
-  Widget _joinGroupRow(Color blue) {
+  Widget _joinGroupRow(Color primary) {
+    final cc = context.cc;
     return Column(
       children: [
         Padding(
@@ -297,19 +310,20 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: blue.withValues(alpha: 0.12),
+                  color: primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.group_outlined, color: blue, size: 19),
+                child: Icon(Icons.group_outlined, color: primary, size: 19),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: TextField(
                   controller: _joinCtrl,
                   autofocus: true,
-                  style: const TextStyle(fontSize: 15),
-                  decoration: const InputDecoration(
+                  style: TextStyle(fontSize: 15, color: cc.primaryText),
+                  decoration: InputDecoration(
                     hintText: 'Enter group URL…',
+                    hintStyle: TextStyle(color: cc.secondaryText),
                     border: InputBorder.none,
                     isDense: true,
                   ),
@@ -317,15 +331,15 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.check_rounded, color: blue),
+                icon: Icon(Icons.check_rounded, color: primary),
                 onPressed: _handleJoinGroup,
               ),
             ],
           ),
         ),
-        const Divider(
+        Divider(
             height: 1, indent: 60, endIndent: 0,
-            color: Color(0xFFEEEEEE)),
+            color: cc.divider),
       ],
     );
   }
@@ -338,7 +352,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     }
     return CircleAvatar(
       radius: 26,
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: Theme.of(context).colorScheme.primary,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : '?',
         style: const TextStyle(
@@ -355,19 +369,22 @@ class _Card extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return Container(
         margin: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cc.cardBackground,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.04),
                 blurRadius: 4)
           ],
         ),
         child: child,
       );
+  }
 }
 
 class _Tile extends StatelessWidget {
@@ -393,6 +410,7 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Column(
       children: [
         ListTile(
@@ -411,20 +429,20 @@ class _Tile extends StatelessWidget {
           title: Text(label,
               style: TextStyle(
                   fontSize: 15,
-                  color: labelColor ?? const Color(0xFF1A1A2E),
+                  color: labelColor ?? cc.primaryText,
                   fontWeight: FontWeight.w500)),
           trailing: trailing ??
               (showArrow
-                  ? const Icon(Icons.chevron_right_rounded,
-                      color: Color(0xFFAAAAAA), size: 20)
+                  ? Icon(Icons.chevron_right_rounded,
+                      color: cc.secondaryText, size: 20)
                   : null),
         ),
         if (!isLast)
-          const Divider(
+          Divider(
               height: 1,
               indent: 60,
               endIndent: 0,
-              color: Color(0xFFEEEEEE)),
+              color: cc.divider),
       ],
     );
   }

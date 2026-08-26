@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../chat/viewmodel/chat_list_viewmodel.dart';
@@ -135,21 +136,23 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: cc.pageBackground,
+        foregroundColor: cc.primaryText,
         elevation: 0.5,
         leading: _step == 1
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: Icon(Icons.arrow_back_rounded, color: cc.primaryText),
                 onPressed: () => setState(() => _step = 0),
               )
             : null,
         title: Text(_step == 0 ? 'New Group' : 'Group Details',
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 17)),
+            style: TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 17, color: cc.primaryText)),
         actions: [
           if (_step == 0)
             TextButton(
@@ -160,8 +163,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 'Next',
                 style: TextStyle(
                   color: _selected.isEmpty
-                      ? const Color(0xFFCCCCCC)
-                      : const Color(0xFF1976D2),
+                      ? cc.border
+                      : primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -170,14 +173,14 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             TextButton(
               onPressed: _creating ? null : _create,
               child: _creating
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18, height: 18,
                       child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xFF1976D2)))
-                  : const Text('Create',
+                          color: primary))
+                  : Text('Create',
                       style: TextStyle(
-                          color: Color(0xFF1976D2),
+                          color: primary,
                           fontWeight: FontWeight.w600)),
             ),
         ],
@@ -189,6 +192,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   // ── Step 0: Member Picker ─────────────────────────────────────────────────
 
   Widget _buildStep0() {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final filtered = _query.isEmpty
         ? _contacts
         : _contacts.where((c) =>
@@ -201,12 +206,14 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
           child: TextField(
             controller: _searchCtrl,
+            style: TextStyle(color: cc.primaryText),
             decoration: InputDecoration(
               hintText: 'Search contacts…',
-              prefixIcon: const Icon(Icons.search_rounded,
-                  color: Color(0xFF888888)),
+              hintStyle: TextStyle(color: cc.secondaryText),
+              prefixIcon: Icon(Icons.search_rounded,
+                  color: cc.secondaryText),
               filled: true,
-              fillColor: const Color(0xFFF0F0F0),
+              fillColor: cc.searchBackground,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
               border: OutlineInputBorder(
@@ -233,11 +240,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         // Contact list
         Expanded(
           child: _contactsLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: CircularProgressIndicator(color: primary))
               : filtered.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text('No contacts found',
-                          style: TextStyle(color: Color(0xFF888888))))
+                          style: TextStyle(color: cc.secondaryText)))
                   : ListView.builder(
                       itemCount: filtered.length,
                       itemBuilder: (_, i) {
@@ -258,13 +265,13 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                             }
                           }),
                           leading: _buildAvatar(chat.avatar, chat.name ?? '?'),
-                          title: Text(chat.name ?? 'Unknown'),
+                          title: Text(chat.name ?? 'Unknown', style: TextStyle(color: cc.primaryText)),
                           trailing: sel
-                              ? const Icon(Icons.check_circle_rounded,
-                                  color: Color(0xFF1976D2))
-                              : const Icon(
+                              ? Icon(Icons.check_circle_rounded,
+                                  color: primary)
+                              : Icon(
                                   Icons.radio_button_unchecked_rounded,
-                                  color: Color(0xFFCCCCCC)),
+                                  color: cc.border),
                         );
                       },
                     ),
@@ -276,6 +283,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   // ── Step 1: Group Details ─────────────────────────────────────────────────
 
   Widget _buildStep1() {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -287,12 +296,12 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
               children: [
                 CircleAvatar(
                   radius: 48,
-                  backgroundColor: const Color(0xFFEEF2FF),
+                  backgroundColor: primary.withValues(alpha: 0.12),
                   backgroundImage:
                       _avatar != null ? FileImage(_avatar!) : null,
                   child: _avatar == null
-                      ? const Icon(Icons.camera_alt_rounded,
-                          color: Color(0xFF1976D2), size: 32)
+                      ? Icon(Icons.camera_alt_rounded,
+                          color: primary, size: 32)
                       : null,
                 ),
                 Positioned(
@@ -300,9 +309,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   child: Container(
                     width: 28, height: 28,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1976D2),
+                      color: primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: cc.cardBackground, width: 2),
                     ),
                     child: const Icon(Icons.edit_rounded,
                         color: Colors.white, size: 14),
@@ -320,11 +329,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         _field(_descCtrl, 'Description (optional)', maxLines: 2, maxLength: 200),
         const SizedBox(height: 16),
         // Privacy type
-        const Text('Group Privacy',
+        Text('Group Privacy',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF888888))),
+                color: cc.secondaryText)),
         const SizedBox(height: 6),
         _privacyCard(),
         // Password field (if password_protected)
@@ -334,11 +343,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         ],
         // Selected members preview
         const SizedBox(height: 16),
-        const Text('Members',
+        Text('Members',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF888888))),
+                color: cc.secondaryText)),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8, runSpacing: 8,
@@ -352,10 +361,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   Widget _field(TextEditingController ctrl, String hint,
-      {int maxLines = 1, int? maxLength}) =>
-      Container(
+      {int maxLines = 1, int? maxLength}) {
+    final cc = context.cc;
+    return Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: cc.inputBackground,
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -363,18 +373,24 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           controller: ctrl,
           maxLines: maxLines,
           maxLength: maxLength,
+          style: TextStyle(color: cc.primaryText),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(color: cc.secondaryText),
             border: InputBorder.none,
             counterText: '',
           ),
         ),
       );
+  }
 
-  Widget _privacyCard() => Container(
+  Widget _privacyCard() {
+    final cc = context.cc;
+    return Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: cc.cardBackground,
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cc.border),
         ),
         child: Column(
           children: [
@@ -384,51 +400,61 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           ],
         ),
       );
+  }
 
-  Widget _privacyOption(String val, String label, String sub) =>
-      RadioListTile<String>(
+  Widget _privacyOption(String val, String label, String sub) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return RadioListTile<String>(
         value:    val,
         groupValue: _privacyType,
-        title:    Text(label),
-        subtitle: Text(sub, style: const TextStyle(fontSize: 12)),
-        activeColor: const Color(0xFF1976D2),
+        title:    Text(label, style: TextStyle(color: cc.primaryText)),
+        subtitle: Text(sub, style: TextStyle(fontSize: 12, color: cc.secondaryText)),
+        activeColor: primary,
         dense: true,
         onChanged: (v) => setState(() { if (v != null) _privacyType = v; }),
       );
+  }
 
-  Widget _passwordField() => Container(
+  Widget _passwordField() {
+    final cc = context.cc;
+    return Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: cc.inputBackground,
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: TextField(
           controller: _pwCtrl,
           obscureText: _obscurePw,
+          style: TextStyle(color: cc.primaryText),
           decoration: InputDecoration(
             hintText: 'Group password',
+            hintStyle: TextStyle(color: cc.secondaryText),
             border: InputBorder.none,
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePw
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
-                color: const Color(0xFF888888), size: 20,
+                color: cc.secondaryText, size: 20,
               ),
               onPressed: () => setState(() => _obscurePw = !_obscurePw),
             ),
           ),
         ),
       );
+  }
 
   Widget _buildAvatar(String? url, String name) {
+    final primary = Theme.of(context).colorScheme.primary;
     if (url != null && url.isNotEmpty) {
       return CircleAvatar(
           radius: 22, backgroundImage: CachedNetworkImageProvider(url));
     }
     return CircleAvatar(
       radius: 22,
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: primary,
       child: Text(name[0].toUpperCase(),
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.w600)),
@@ -442,7 +468,10 @@ class _Chip extends StatelessWidget {
   final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
@@ -450,7 +479,7 @@ class _Chip extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: const Color(0xFF1976D2),
+                backgroundColor: primary,
                 backgroundImage: user.avatar != null
                     ? CachedNetworkImageProvider(user.avatar!)
                     : null,
@@ -467,8 +496,8 @@ class _Chip extends StatelessWidget {
                     onTap: onRemove,
                     child: Container(
                       width: 18, height: 18,
-                      decoration: const BoxDecoration(
-                          color: Color(0xFF888888), shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                          color: cc.secondaryText, shape: BoxShape.circle),
                       child: const Icon(Icons.close_rounded,
                           color: Colors.white, size: 12),
                     ),
@@ -481,11 +510,12 @@ class _Chip extends StatelessWidget {
             width: 52,
             child: Text(
               user.name.split(' ').first,
-              style: const TextStyle(fontSize: 11),
+              style: TextStyle(fontSize: 11, color: cc.primaryText),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       );
+  }
 }

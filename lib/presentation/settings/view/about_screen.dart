@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/constants/app_constants.dart';
+import '../../../presentation/common/widgets/legal_page_sheet.dart';
 
+/// App Info screen — mirrors RN's components/setting/appinfo.js.
+/// Shows only: Privacy Policy, Terms of Service, About Us.
+/// Tapping each opens the LegalPageSheet (fetches from GET /user/page/:key).
 class AboutScreen extends ConsumerStatefulWidget {
   const AboutScreen({super.key});
 
@@ -40,12 +42,14 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0.5,
-        title: const Text('About CircuitChat',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
+        title: const Text(
+          'App Info',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+        ),
       ),
       body: ListView(
         children: [
-          // ── App identity ──────────────────────────────────────────────────
+          // ── App identity ────────────────────────────────────────────────
           const SizedBox(height: 32),
           const Center(
             child: CircleAvatar(
@@ -57,32 +61,83 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
           ),
           const SizedBox(height: 14),
           const Center(
-            child: Text('CircuitChat',
-                style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 22,
-                    color: Color(0xFF1A1A2E))),
+            child: Text(
+              'CircuitChat',
+              style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  color: Color(0xFF1A1A2E)),
+            ),
           ),
           Center(
-            child: Text('Version $_version (build $_build)',
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF888888))),
+            child: Text(
+              'Version $_version (build $_build)',
+              style: const TextStyle(
+                  fontSize: 13, color: Color(0xFF888888)),
+            ),
           ),
           const SizedBox(height: 28),
-          // ── Info tiles ────────────────────────────────────────────────────
-          _group([
-            _tile('Terms of Service', Icons.description_outlined,
-                () => _open('${AppConstants.seServerUrl}terms')),
-            _tile('Privacy Policy', Icons.privacy_tip_outlined,
-                () => _open('${AppConstants.seServerUrl}privacy')),
-          ]),
-          const SizedBox(height: 12),
-          _group([
-            _tile('Server',  Icons.dns_outlined, null,
-                trailing: AppConstants.baseUrl),
-            _tile('Run Mode', Icons.settings_ethernet_rounded, null,
-                trailing: AppConstants.runMode),
-          ]),
+
+          // ── Links — matches RN appinfo.js exactly ────────────────────────
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 4)
+              ],
+            ),
+            child: Column(
+              children: [
+                // Privacy Policy
+                ListTile(
+                  onTap: () => LegalPageSheet.show(
+                    context,
+                    pageKey: 'privacy',
+                    title:   'Privacy Policy',
+                  ),
+                  title: const Text('Privacy Policy',
+                      style: TextStyle(fontSize: 15)),
+                  trailing: const Icon(Icons.chevron_right_rounded,
+                      color: Color(0xFFAAAAAA)),
+                ),
+                const Divider(
+                    height: 1, indent: 16, color: Color(0xFFEEEEEE)),
+
+                // Terms of Service
+                ListTile(
+                  onTap: () => LegalPageSheet.show(
+                    context,
+                    pageKey: 'terms',
+                    title:   'Terms of Service',
+                  ),
+                  title: const Text('Terms of Service',
+                      style: TextStyle(fontSize: 15)),
+                  trailing: const Icon(Icons.chevron_right_rounded,
+                      color: Color(0xFFAAAAAA)),
+                ),
+                const Divider(
+                    height: 1, indent: 16, color: Color(0xFFEEEEEE)),
+
+                // About Us
+                ListTile(
+                  onTap: () => LegalPageSheet.show(
+                    context,
+                    pageKey: 'about',
+                    title:   'About Us',
+                  ),
+                  title: const Text('About Us',
+                      style: TextStyle(fontSize: 15)),
+                  trailing: const Icon(Icons.chevron_right_rounded,
+                      color: Color(0xFFAAAAAA)),
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 32),
           const Center(
             child: Text(
@@ -94,39 +149,5 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
         ],
       ),
     );
-  }
-
-  Widget _group(List<Widget> children) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04), blurRadius: 4)
-          ],
-        ),
-        child: Column(children: children),
-      );
-
-  Widget _tile(String label, IconData icon, VoidCallback? onTap,
-      {String? trailing}) =>
-      ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: const Color(0xFF1976D2)),
-        title: Text(label, style: const TextStyle(fontSize: 15)),
-        trailing: trailing != null
-            ? Text(trailing,
-                style: const TextStyle(
-                    fontSize: 12, color: Color(0xFF888888)))
-            : onTap != null
-                ? const Icon(Icons.chevron_right_rounded,
-                    color: Color(0xFFAAAAAA))
-                : null,
-      );
-
-  Future<void> _open(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null) await launchUrl(uri);
   }
 }

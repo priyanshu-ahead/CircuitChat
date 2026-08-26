@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 /// Shimmer placeholder for message list loading.
 class MessageShimmerList extends StatelessWidget {
   const MessageShimmerList({super.key, this.itemCount = 8});
@@ -8,9 +10,12 @@ class MessageShimmerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final base      = isDark ? const Color(0xFF2C2C3E) : const Color(0xFFE0E0E0);
+    final highlight = isDark ? const Color(0xFF3A3A52) : const Color(0xFFF5F5F5);
     return Shimmer.fromColors(
-      baseColor:  const Color(0xFFE0E0E0),
-      highlightColor: const Color(0xFFF5F5F5),
+      baseColor: base,
+      highlightColor: highlight,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         itemCount: itemCount,
@@ -46,9 +51,12 @@ class ChatListShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final base      = isDark ? const Color(0xFF2C2C3E) : const Color(0xFFE0E0E0);
+    final highlight = isDark ? const Color(0xFF3A3A52) : const Color(0xFFF5F5F5);
     return Shimmer.fromColors(
-      baseColor:      const Color(0xFFE0E0E0),
-      highlightColor: const Color(0xFFF5F5F5),
+      baseColor:      base,
+      highlightColor: highlight,
       child: ListView.builder(
         itemCount: itemCount,
         itemBuilder: (_, __) => Padding(

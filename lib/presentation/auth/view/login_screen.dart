@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../presentation/common/widgets/legal_page_sheet.dart';
 import '../../app_init/app_init_viewmodel.dart';
 import '../viewmodel/auth_viewmodel.dart';
@@ -43,11 +44,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final authState = ref.watch(authViewModelProvider);
     final isLoading = authState.isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF2F7),
+      backgroundColor: cc.surfaceBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -56,11 +59,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               // ── Card ─────────────────────────────────────────────────────
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cc.cardBackground,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.07),
+                      color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.07),
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),
@@ -76,10 +79,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Center(
                         child: Text(
                           AppStrings.login,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1A1A2E),
+                            color: cc.primaryText,
                           ),
                         ),
                       ),
@@ -94,17 +97,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               AppStrings.newHere,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[600],
+                                color: cc.secondaryText,
                               ),
                             ),
                             GestureDetector(
                               onTap: () => context.go(Routes.register),
-                              child: const Text(
+                              child: Text(
                                 AppStrings.signUp,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1976D2),
+                                  color: primary,
                                 ),
                               ),
                             ),
@@ -119,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           AppStrings.signInToAccount,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[500],
+                            color: cc.secondaryText,
                           ),
                         ),
                       ),
@@ -132,7 +135,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
-                        decoration: _inputDecoration(AppStrings.emailHint),
+                        style: TextStyle(color: cc.primaryText),
+                        decoration: _inputDecoration(context, AppStrings.emailHint),
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return AppStrings.emailRequiredError;
@@ -153,15 +157,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         controller: _passwordCtrl,
                         obscureText: _obscurePassword,
                         textInputAction: TextInputAction.done,
+                        style: TextStyle(color: cc.primaryText),
                         onFieldSubmitted: (_) => _onLogin(),
                         decoration:
-                        _inputDecoration(AppStrings.loginPasswordHint).copyWith(
+                        _inputDecoration(context, AppStrings.loginPasswordHint).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: Colors.grey[500],
+                              color: cc.secondaryText,
                               size: 22,
                             ),
                             onPressed: () =>
@@ -186,10 +191,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text(
+                          child: Text(
                             AppStrings.forgotPassword,
                             style: TextStyle(
-                              color: Color(0xFF1976D2),
+                              color: primary,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -233,7 +238,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: isLoading ? null : _onLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1976D2),
+                            backgroundColor: primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
@@ -276,7 +281,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       title: 'Terms of Service',
                     ),
                   ),
-                  _dot,
+                  _dot(context),
                   _FooterLink(
                     AppStrings.privacy,
                     onTap: () => LegalPageSheet.show(
@@ -285,7 +290,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       title: 'Privacy Policy',
                     ),
                   ),
-                  _dot,
+                  _dot(context),
                   _FooterLink(
                     AppStrings.aboutUs,
                     onTap: () => LegalPageSheet.show(
@@ -303,38 +308,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-    filled: true,
-    fillColor: const Color(0xFFF2F4F8),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF1976D2), width: 1.5),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFEF4444)),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-    ),
-    contentPadding:
-    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  );
+  InputDecoration _inputDecoration(BuildContext context, String hint) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: cc.secondaryText, fontSize: 14),
+      filled: true,
+      fillColor: cc.inputBackground,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cc.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cc.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+      ),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
 
-  Widget get _dot => Padding(
+  Widget _dot(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 4),
-    child: Text('•', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+    child: Text('•', style: TextStyle(color: context.cc.secondaryText, fontSize: 12)),
   );
 }
 
@@ -344,13 +353,14 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return RichText(
       text: TextSpan(
         text: '$label: ',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A2E),
+          color: cc.primaryText,
         ),
         children: const [
           TextSpan(
@@ -374,8 +384,8 @@ class _FooterLink extends StatelessWidget {
       onTap: onTap,
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFF1976D2),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.primary,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),

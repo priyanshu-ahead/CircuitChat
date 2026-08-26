@@ -30,7 +30,8 @@ class ConnectivityBanner extends ConsumerWidget {
       error:   (_, __) => false,
     );
 
-    return Column(
+    return Scaffold(
+        body:Column(
       children: [
         Expanded(child: child),
         AnimatedSwitcher(
@@ -58,6 +59,7 @@ class ConnectivityBanner extends ConsumerWidget {
               : const SizedBox.shrink(key: ValueKey('online')),
         ),
       ],
+    )
     );
   }
 }

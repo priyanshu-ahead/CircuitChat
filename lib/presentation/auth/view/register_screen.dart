@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../app_init/app_init_viewmodel.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
@@ -106,11 +107,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final authState = ref.watch(authViewModelProvider);
     final isLoading = authState.isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF2F7),
+      backgroundColor: cc.surfaceBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -119,11 +122,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // ── Card ─────────────────────────────────────────────────────
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cc.cardBackground,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.07),
+                        color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.07),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -139,10 +142,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         Center(
                           child: Text(
                             AppStrings.signup,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF1A1A2E),
+                              color: cc.primaryText,
                             ),
                           ),
                         ),
@@ -157,17 +160,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 AppStrings.alreadyHaveAccount,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.grey[700],
+                                  color: cc.secondaryText,
                                 ),
                               ),
                               GestureDetector(
                                 onTap: () => context.go(Routes.login),
-                                child: const Text(
+                                child: Text(
                                   AppStrings.login,
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1976D2),
+                                    color: primary,
                                   ),
                                 ),
                               ),
@@ -179,7 +182,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         Center(
                           child: Text(
                             AppStrings.signupSubtitle,
-                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            style: TextStyle(fontSize: 13, color: cc.secondaryText),
                           ),
                         ),
                         const SizedBox(height: 28),
@@ -190,7 +193,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         TextFormField(
                           controller: _nameCtrl,
                           textInputAction: TextInputAction.next,
-                          decoration: _inputDecoration(AppStrings.nameHint),
+                          style: TextStyle(color: cc.primaryText),
+                          decoration: _inputDecoration(context, AppStrings.nameHint),
                           validator: (v) => (v == null || v.trim().isEmpty)
                               ? AppStrings.nameRequiredError
                               : null,
@@ -204,7 +208,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
-                          decoration: _inputDecoration(AppStrings.emailHint),
+                          style: TextStyle(color: cc.primaryText),
+                          decoration: _inputDecoration(context, AppStrings.emailHint),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return AppStrings.emailRequiredError;
@@ -225,9 +230,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           controller: _passwordCtrl,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.next,
-                          decoration: _inputDecoration(AppStrings.passwordHint).copyWith(
+                          style: TextStyle(color: cc.primaryText),
+                          decoration: _inputDecoration(context, AppStrings.passwordHint).copyWith(
                             suffixIcon: _eyeIcon(
                               obscure: _obscurePassword,
+                              color: cc.secondaryText,
                               onTap: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
                           ),
@@ -253,10 +260,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           controller: _confirmCtrl,
                           obscureText: _obscureConfirm,
                           textInputAction: TextInputAction.next,
+                          style: TextStyle(color: cc.primaryText),
                           decoration:
-                          _inputDecoration(AppStrings.confirmPasswordHint).copyWith(
+                          _inputDecoration(context, AppStrings.confirmPasswordHint).copyWith(
                             suffixIcon: _eyeIcon(
                               obscure: _obscureConfirm,
+                              color: cc.secondaryText,
                               onTap: () => setState(() => _obscureConfirm = !_obscureConfirm),
                             ),
                           ),
@@ -279,7 +288,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ? Container(
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF2F4F8),
+                                  color: cc.inputBackground,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Center(
@@ -293,19 +302,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             : DropdownButtonFormField<String>(
                                 initialValue: _selectedLanguageName,
                                 hint: const Text(''),
-                                decoration: _inputDecoration('').copyWith(
+                                dropdownColor: cc.cardBackground,
+                                style: TextStyle(color: cc.primaryText, fontSize: 14),
+                                decoration: _inputDecoration(context, '').copyWith(
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 6),
                                 ),
-                                icon: const Icon(
+                                icon: Icon(
                                     Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xFF555555)),
+                                    color: cc.secondaryText),
                                 items: _languageOptions
                                     .map((lang) => DropdownMenuItem<String>(
                                           value: lang.name,
                                           child: Text(lang.name,
-                                              style:
-                                                  const TextStyle(fontSize: 14)),
+                                              style: TextStyle(
+                                                  color: cc.primaryText,
+                                                  fontSize: 14)),
                                         ))
                                     .toList(),
                                 onChanged: (v) {
@@ -334,11 +346,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               height: 22,
                               child: Checkbox(
                                 value: _agreedToTerms,
-                                activeColor: const Color(0xFF1976D2),
+                                activeColor: primary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(3),
                                 ),
-                                side: BorderSide(color: Colors.grey[400]!),
+                                side: BorderSide(color: cc.border),
                                 onChanged: (v) =>
                                     setState(() => _agreedToTerms = v ?? false),
                               ),
@@ -350,13 +362,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   text: AppStrings.agreeToTerms,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[700],
+                                    color: cc.secondaryText,
                                   ),
                                   children: [
                                     TextSpan(
                                       text: AppStrings.termsAndConditions,
-                                      style: const TextStyle(
-                                        color: Color(0xFF1976D2),
+                                      style: TextStyle(
+                                        color: primary,
                                         fontWeight: FontWeight.w500,
                                       ),
                                       recognizer: TapGestureRecognizer()
@@ -403,7 +415,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: ElevatedButton(
                             onPressed: isLoading ? null : _onSignup,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1976D2),
+                              backgroundColor: primary,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
@@ -440,44 +452,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _eyeIcon({required bool obscure, required VoidCallback onTap}) {
+  Widget _eyeIcon({required bool obscure, required Color color, required VoidCallback onTap}) {
     return IconButton(
       icon: Icon(
         obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-        color: Colors.grey[500],
+        color: color,
         size: 22,
       ),
       onPressed: onTap,
     );
   }
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-    filled: true,
-    fillColor: const Color(0xFFF2F4F8),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF1976D2), width: 1.5),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFEF4444)),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  );
+  InputDecoration _inputDecoration(BuildContext context, String hint) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: cc.secondaryText, fontSize: 14),
+      filled: true,
+      fillColor: cc.inputBackground,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cc.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cc.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -486,13 +502,14 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return RichText(
       text: TextSpan(
         text: '$label: ',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A2E),
+          color: cc.primaryText,
         ),
         children: const [
           TextSpan(

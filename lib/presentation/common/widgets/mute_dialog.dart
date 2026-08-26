@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 /// Duration options mirror RN's muteDialog.js
 enum MuteDuration {
   oneHour    ('1 Hour',     Duration(hours: 1)),
@@ -16,8 +18,10 @@ enum MuteDuration {
 /// Returns the chosen [MuteDuration] or null if dismissed.
 class MuteDialog {
   static Future<MuteDuration?> show(BuildContext context) {
+    final cc = context.cc;
     return showModalBottomSheet<MuteDuration>(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -30,17 +34,18 @@ class MuteDialog {
               child: Container(
                 width: 36, height: 4,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFCCCCCC),
+                    color: cc.border,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 12),
-            const Text('Mute Notifications',
+            Text('Mute Notifications',
                 style: TextStyle(
+                    color: cc.primaryText,
                     fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 4),
             ...MuteDuration.values.map((d) => ListTile(
-                  title: Text(d.label),
+                  title: Text(d.label, style: TextStyle(color: cc.primaryText)),
                   onTap: () => Navigator.pop(context, d),
                 )),
             const SizedBox(height: 8),

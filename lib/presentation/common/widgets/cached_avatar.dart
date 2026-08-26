@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 
 /// Circular cached avatar with initials fallback.
 class CachedAvatar extends StatelessWidget {
@@ -27,11 +28,13 @@ class CachedAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Stack(
       children: [
         CircleAvatar(
           radius: radius,
-          backgroundColor: AppColors.primaryLight,
+          backgroundColor: primary,
           child: url != null && url!.isNotEmpty
               ? ClipOval(
                   child: CachedNetworkImage(
@@ -54,7 +57,7 @@ class CachedAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.online,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(color: cc.pageBackground, width: 1.5),
               ),
             ),
           ),

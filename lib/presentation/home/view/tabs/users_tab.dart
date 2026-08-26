@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/providers.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/chat_model.dart';
 import '../../../../data/models/user_model.dart';
 import '../../../../presentation/common/widgets/shimmer_list.dart';
@@ -128,6 +129,8 @@ class _UsersTabState extends ConsumerState<UsersTab> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final state = ref.watch(_usersProvider);
 
     // ── Frequently contacted: last 2 unique chats from today ─────────────
@@ -161,7 +164,7 @@ class _UsersTabState extends ConsumerState<UsersTab> {
     final frequent = frequentlyContacted.take(2).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -170,12 +173,12 @@ class _UsersTabState extends ConsumerState<UsersTab> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text('People',
                         style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1A1A2E))),
+                            color: cc.primaryText)),
                   ),
                 ],
               ),
@@ -184,15 +187,16 @@ class _UsersTabState extends ConsumerState<UsersTab> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
                 controller: _searchCtrl,
+                style: TextStyle(color: cc.primaryText),
                 decoration: InputDecoration(
                   hintText: 'Search contacts…',
                   hintStyle:
-                      TextStyle(color: Colors.grey[400], fontSize: 14),
+                      TextStyle(color: cc.secondaryText, fontSize: 14),
                   prefixIcon: Icon(Icons.search_rounded,
-                      color: Colors.grey[400], size: 20),
+                      color: cc.secondaryText, size: 20),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18),
+                          icon: Icon(Icons.close_rounded, size: 18, color: cc.secondaryText),
                           onPressed: () {
                             _searchCtrl.clear();
                             ref.read(_usersProvider.notifier).search('');
@@ -200,7 +204,7 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFFF2F4F8),
+                  fillColor: cc.searchBackground,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
@@ -219,7 +223,7 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                   : state.isLoading
                       ? const ChatListShimmer()
                       : RefreshIndicator(
-                          color: const Color(0xFF1976D2),
+                          color: primary,
                           onRefresh: () async =>
                               ref.read(_usersProvider.notifier).refresh(),
                           child: ListView(
@@ -231,8 +235,7 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                                     width: 46,
                                     height: 46,
                                     decoration: BoxDecoration(
-                                      color:
-                                          const Color(0xFF1976D2),
+                                      color: primary,
                                       borderRadius:
                                           BorderRadius.circular(23),
                                     ),
@@ -250,16 +253,16 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                                             const CreateGroupScreen()),
                                   ),
                                 ),
-                                const Divider(
+                                Divider(
                                     height: 1,
                                     indent: 70,
-                                    color: Color(0xFFF0F0F0)),
+                                    color: cc.border),
                               ],
 
                               // ── 2. Frequently Contacted ─────────────────
                               if (state.query.isEmpty &&
                                   frequent.isNotEmpty) ...[
-                                _SectionHeader('Frequently Contacted'),
+                                const _SectionHeader('Frequently Contacted'),
                                 ...frequent.map((c) => _ChatContactTile(
                                     chat: c,
                                     onTap: () => context.push(
@@ -269,14 +272,14 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                               ],
 
                               // ── 3. Chats section with letter separators ──
-                              _SectionHeader('Chats'),
+                              const _SectionHeader('Chats'),
                               if (state.filtered.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.all(32),
+                                Padding(
+                                  padding: const EdgeInsets.all(32),
                                   child: Center(
                                     child: Text('No contacts found',
                                         style: TextStyle(
-                                            color: Color(0xFF888888),
+                                            color: cc.secondaryText,
                                             fontSize: 14)),
                                   ),
                                 )
@@ -326,19 +329,22 @@ class _SectionHeader extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Container(
-        color: const Color(0xFFF8F8F8),
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return Container(
+        color: cc.surfaceBackground,
         padding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF888888),
+            color: cc.secondaryText,
           ),
         ),
       );
+  }
 }
 
 class _LetterDivider extends StatelessWidget {
@@ -346,19 +352,22 @@ class _LetterDivider extends StatelessWidget {
   final String letter;
 
   @override
-  Widget build(BuildContext context) => Container(
-        color: const Color(0xFFF8F8F8),
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return Container(
+        color: cc.surfaceBackground,
         padding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Text(
           letter,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF666666),
+            color: cc.secondaryText,
           ),
         ),
       );
+  }
 }
 
 class _ListTile extends StatelessWidget {
@@ -374,7 +383,9 @@ class _ListTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return InkWell(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -388,26 +399,27 @@ class _ListTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1A1A2E))),
+                            color: cc.primaryText)),
                     if (subtitle != null)
                       Text(subtitle!,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF888888)),
+                              color: cc.secondaryText),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFFAAAAAA), size: 18),
+              Icon(Icons.chevron_right_rounded,
+                  color: cc.secondaryText, size: 18),
             ],
           ),
         ),
       );
+  }
 }
 
 class _ChatContactTile extends StatelessWidget {
@@ -417,6 +429,7 @@ class _ChatContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Column(
       children: [
         InkWell(
@@ -431,7 +444,7 @@ class _ChatContactTile extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 23,
-                      backgroundColor: const Color(0xFFDDE4EF),
+                      backgroundColor: cc.surfaceBackground,
                       backgroundImage: chat.avatar != null &&
                               chat.avatar!.isNotEmpty
                           ? CachedNetworkImageProvider(chat.avatar!)
@@ -442,7 +455,7 @@ class _ChatContactTile extends StatelessWidget {
                               chat.type == ChatType.group
                                   ? Icons.group_rounded
                                   : Icons.person_rounded,
-                              color: const Color(0xFF9AA6B8),
+                              color: cc.secondaryText,
                               size: 22)
                           : null,
                     ),
@@ -457,7 +470,7 @@ class _ChatContactTile extends StatelessWidget {
                             color: const Color(0xFF43A047),
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: Colors.white, width: 2),
+                                color: cc.pageBackground, width: 2),
                           ),
                         ),
                       ),
@@ -470,10 +483,10 @@ class _ChatContactTile extends StatelessWidget {
                     children: [
                       Text(
                         chat.name ?? 'Unknown',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1A1A2E)),
+                            color: cc.primaryText),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -482,9 +495,9 @@ class _ChatContactTile extends StatelessWidget {
                           chat.members.first.bio!.isNotEmpty)
                         Text(
                           chat.members.first.bio!,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF888888)),
+                              color: cc.secondaryText),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -495,8 +508,8 @@ class _ChatContactTile extends StatelessWidget {
             ),
           ),
         ),
-        const Divider(
-            height: 1, indent: 70, color: Color(0xFFF0F0F0)),
+        Divider(
+            height: 1, indent: 70, color: cc.border),
       ],
     );
   }

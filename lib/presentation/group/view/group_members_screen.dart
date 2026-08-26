@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/group_model.dart';
 import '../viewmodel/group_viewmodel.dart';
 
@@ -50,6 +51,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final state = ref.watch(groupViewModelProvider(widget.groupId));
     final allMembers = state.members
         .where((m) =>
@@ -65,28 +68,30 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             .toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: cc.pageBackground,
+        foregroundColor: cc.primaryText,
         elevation: 0.5,
         title: _searchActive
             ? TextField(
                 controller: _searchCtrl,
                 autofocus: true,
-                decoration: const InputDecoration(
+                style: TextStyle(color: cc.primaryText),
+                decoration: InputDecoration(
                   hintText: 'Search members…',
+                  hintStyle: TextStyle(color: cc.secondaryText),
                   border: InputBorder.none,
                 ),
               )
             : Text(
                 'Members (${allMembers.length})',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 17),
+                style: TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 17, color: cc.primaryText),
               ),
         leading: _searchActive
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: Icon(Icons.arrow_back_rounded, color: cc.primaryText),
                 onPressed: () {
                   setState(() {
                     _searchActive = false;
@@ -98,23 +103,23 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         actions: [
           if (!_searchActive)
             IconButton(
-              icon: const Icon(Icons.search_rounded),
+              icon: Icon(Icons.search_rounded, color: cc.primaryText),
               onPressed: () => setState(() => _searchActive = true),
             ),
           if (_searchActive && _query.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close_rounded),
+              icon: Icon(Icons.close_rounded, color: cc.primaryText),
               onPressed: () => setState(() => _searchCtrl.clear()),
             ),
         ],
       ),
       body: state.isLoading && allMembers.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: primary))
           : filtered.isEmpty
               ? Center(
                   child: Text(
                     _query.isNotEmpty ? 'No results for "$_query"' : 'No members',
-                    style: const TextStyle(color: Color(0xFF888888)),
+                    style: TextStyle(color: cc.secondaryText),
                   ),
                 )
               : ListView.builder(
@@ -122,9 +127,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                   itemCount: filtered.length + (state.membersHasMore ? 1 : 0),
                   itemBuilder: (context, i) {
                     if (i == filtered.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator(color: primary)),
                       );
                     }
                     return _MemberTile(
@@ -161,6 +166,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
 
   Future<void> _confirmAction(
       String title, String message, Future<bool> Function() action) async {
+    final cc = context.cc;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -169,7 +175,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(title,
@@ -203,21 +209,23 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return ListTile(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: _Avatar(url: member.user.avatar, name: member.user.name),
       title: Text(
         member.user.name,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        style: TextStyle(fontWeight: FontWeight.w500, color: cc.primaryText),
       ),
       subtitle: member.isAdmin
-          ? const Text('Admin',
+          ? Text('Admin',
               style: TextStyle(
-                  color: Color(0xFF057EFC), fontSize: 12))
+                  color: primary, fontSize: 12))
           : null,
       trailing: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF888888)),
+        icon: Icon(Icons.more_vert_rounded, color: cc.secondaryText),
         onSelected: (v) {
           switch (v) {
             case 'make_admin':
@@ -260,6 +268,7 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     if (url != null && url!.isNotEmpty) {
       return CircleAvatar(
         radius: 22,
@@ -268,7 +277,7 @@ class _Avatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 22,
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: primary,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : '?',
         style:

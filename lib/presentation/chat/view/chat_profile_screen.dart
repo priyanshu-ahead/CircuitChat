@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/router/app_router.dart';
-import '../../../data/models/chat_model.dart';
-import '../../../data/repositories/chat_repository.dart';
 import '../../../core/di/providers.dart';
+import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../data/models/chat_model.dart';
 import '../../../data/models/group_model.dart';
+import '../../../data/repositories/chat_repository.dart';
 import '../../group/viewmodel/group_viewmodel.dart';
 
 class ChatProfileScreen extends ConsumerStatefulWidget {
@@ -37,23 +38,24 @@ class _DirectProfile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cc = context.cc;
     final other = chat.members.isNotEmpty ? chat.members.first : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: cc.surfaceBackground,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 260,
             pinned: true,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
+            backgroundColor: cc.surfaceBackground,
+            foregroundColor: cc.primaryText,
             elevation: 0.5,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _buildHeroAvatar(chat.avatar, chat.name ?? ''),
+                  _buildHeroAvatar(context, chat.avatar, chat.name ?? ''),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -82,7 +84,7 @@ class _DirectProfile extends ConsumerWidget {
                 // Online status
                 if (chat.isOnline)
                   Container(
-                    color: Colors.white,
+                    color: cc.cardBackground,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 8),
                     child: const Row(
@@ -182,6 +184,7 @@ class _DirectProfile extends ConsumerWidget {
   }
 
   Future<void> _confirmBlock(BuildContext context, WidgetRef ref) async {
+    final cc = context.cc;
     final action = chat.isBlockedByMe ? 'Unblock' : 'Block';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -191,7 +194,7 @@ class _DirectProfile extends ConsumerWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(action,
@@ -215,24 +218,27 @@ class _GroupProfile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final groupState = ref.watch(groupViewModelProvider(chat.id));
     final group = groupState.group;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: cc.surfaceBackground,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 260,
             pinned: true,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
+            backgroundColor: cc.surfaceBackground,
+            foregroundColor: cc.primaryText,
             elevation: 0.5,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   _buildHeroAvatar(
+                      context,
                       chat.avatar ?? group?.avatar, chat.name ?? ''),
                   const DecoratedBox(
                     decoration: BoxDecoration(
@@ -252,9 +258,9 @@ class _GroupProfile extends ConsumerWidget {
           ),
           SliverToBoxAdapter(
             child: groupState.isLoading
-                ? const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()))
+                ? Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator(color: primary)))
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -358,6 +364,7 @@ class _GroupProfile extends ConsumerWidget {
   }
 
   Future<void> _confirmLeave(BuildContext context, WidgetRef ref) async {
+    final cc = context.cc;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -367,7 +374,7 @@ class _GroupProfile extends ConsumerWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Leave',
@@ -388,20 +395,21 @@ class _GroupProfile extends ConsumerWidget {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-Widget _buildHeroAvatar(String? url, String name) {
+Widget _buildHeroAvatar(BuildContext context, String? url, String name) {
   if (url != null && url.isNotEmpty) {
     return CachedNetworkImage(
       imageUrl: url,
       fit: BoxFit.cover,
-      errorWidget: (_, __, ___) => _fallbackAvatar(name),
+      errorWidget: (_, __, ___) => _fallbackAvatar(context, name),
     );
   }
-  return _fallbackAvatar(name);
+  return _fallbackAvatar(context, name);
 }
 
-Widget _fallbackAvatar(String name) {
+Widget _fallbackAvatar(BuildContext context, String name) {
+  final primary = Theme.of(context).colorScheme.primary;
   return Container(
-    color: const Color(0xFF1976D2),
+    color: primary,
     child: Center(
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : '?',
@@ -421,20 +429,21 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Container(
-      color: Colors.white,
+      color: cc.cardBackground,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF888888),
+                  color: cc.secondaryText,
                   fontWeight: FontWeight.w500)),
           const SizedBox(height: 2),
           Text(value,
-              style: const TextStyle(fontSize: 15, color: Colors.black87)),
+              style: TextStyle(fontSize: 15, color: cc.primaryText)),
         ],
       ),
     );
@@ -447,8 +456,9 @@ class _ActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Container(
-      color: Colors.white,
+      color: cc.cardBackground,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: actions
@@ -478,7 +488,8 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = action.color ?? const Color(0xFF1976D2);
+    final primary = Theme.of(context).colorScheme.primary;
+    final color = action.color ?? primary;
     return InkWell(
       onTap: action.onTap,
       child: Padding(

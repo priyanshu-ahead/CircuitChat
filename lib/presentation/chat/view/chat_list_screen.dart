@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/models/message_model.dart';
 import '../../../data/models/user_model.dart';
@@ -78,7 +80,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(chatListViewModelProvider);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.cc.pageBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -98,33 +100,35 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
   // ── Header: title + search + filter chips ─────────────────────────────────
   Widget _buildHeader(ChatListState state) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Container(
-      color: Colors.white,
+      color: cc.pageBackground,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Chats',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
+                    color: cc.primaryText,
                   ),
                 ),
               ),
               if (state.archiveCount > 0)
                 TextButton.icon(
                   onPressed: () => context.push(Routes.archivedChats),
-                  icon: const Icon(Icons.archive_outlined,
-                      size: 18, color: Color(0xFF1976D2)),
+                  icon: Icon(Icons.archive_outlined,
+                      size: 18, color: primary),
                   label: Text(
                     'Archived (${state.archiveCount})',
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFF1976D2)),
+                    style: TextStyle(
+                        fontSize: 13, color: primary),
                   ),
                 ),
             ],
@@ -133,14 +137,15 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           // Search bar
           TextField(
             controller: _searchCtrl,
+            style: TextStyle(color: cc.primaryText),
             decoration: InputDecoration(
               hintText: 'Search chats…',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              hintStyle: TextStyle(color: cc.secondaryText, fontSize: 14),
               prefixIcon:
-                  Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
+                  Icon(Icons.search_rounded, color: cc.secondaryText, size: 20),
               suffixIcon: state.searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18),
+                      icon: Icon(Icons.close_rounded, size: 18, color: cc.secondaryText),
                       onPressed: () {
                         _searchCtrl.clear();
                         ref
@@ -150,7 +155,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                     )
                   : null,
               filled: true,
-              fillColor: const Color(0xFFF2F4F8),
+              fillColor: cc.searchBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30),
                 borderSide: BorderSide.none,
@@ -204,6 +209,8 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
   // ── Body ──────────────────────────────────────────────────────────────────
   Widget _buildBody(ChatListState state) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     if (state.isLoading) {
       return const ChatListShimmer();
     }
@@ -218,19 +225,19 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.signal_wifi_off_rounded,
-                size: 54, color: Colors.grey[300]),
+                size: 54, color: cc.secondaryText),
             const SizedBox(height: 12),
             Text(
               state.errorMessage ?? 'Failed to load chats.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              style: TextStyle(color: cc.secondaryText, fontSize: 14),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () =>
                   ref.read(chatListViewModelProvider.notifier).refresh(),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1976D2)),
+                  backgroundColor: primary),
               child: const Text('Retry',
                   style: TextStyle(color: Colors.white)),
             ),
@@ -245,7 +252,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     }
 
     return RefreshIndicator(
-      color: const Color(0xFF1976D2),
+      color: primary,
       onRefresh: () async {
         await Future.wait([
           ref.read(chatListViewModelProvider.notifier).refresh(),
@@ -255,18 +262,18 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       child: ListView.separated(
         controller: _scrollCtrl,
         itemCount: chats.length + (state.isLoadingMore ? 1 : 0),
-        separatorBuilder: (_, __) => const Divider(
+        separatorBuilder: (_, __) => Divider(
           height: 0,
           indent: 72,
-          color: Color(0xFFF0F0F0),
+          color: cc.divider,
         ),
         itemBuilder: (ctx, i) {
           if (i == chats.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
+            return Padding(
+              padding: const EdgeInsets.all(16),
               child: Center(
                 child:
-                    CircularProgressIndicator(color: Color(0xFF1976D2)),
+                    CircularProgressIndicator(color: primary),
               ),
             );
           }
@@ -303,6 +310,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   }
 
   Widget _buildEmptyState(ChatListState state) {
+    final cc = context.cc;
     final isFiltered =
         state.filter != ChatFilter.all || state.searchQuery.isNotEmpty;
     return Center(
@@ -312,13 +320,13 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           Icon(
             isFiltered ? Icons.search_off_rounded : Icons.chat_bubble_outline_rounded,
             size: 64,
-            color: Colors.grey[300],
+            color: cc.secondaryText,
           ),
           const SizedBox(height: 12),
           Text(
             isFiltered ? 'No chats match your filter.' : 'No chats yet.\nStart a new conversation!',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[500], fontSize: 15),
+            style: TextStyle(color: cc.secondaryText, fontSize: 15),
           ),
         ],
       ),
@@ -326,6 +334,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   }
 
   Future<void> _confirmDelete(ChatModel chat) async {
+    final cc = context.cc;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -334,7 +343,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete',
@@ -366,18 +375,18 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE3EEFF) : Colors.transparent,
+          color: selected ? primary.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected
-                ? const Color(0xFF1976D2)
-                : const Color(0xFFDDDDDD),
+            color: selected ? primary : cc.border,
           ),
         ),
         child: Text(
@@ -385,9 +394,7 @@ class _FilterChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: selected
-                ? const Color(0xFF1976D2)
-                : const Color(0xFF666666),
+            color: selected ? primary : cc.secondaryText,
           ),
         ),
       ),
@@ -415,6 +422,8 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       onLongPress: () => _showContextMenu(context),
@@ -431,17 +440,17 @@ class _ChatTile extends StatelessWidget {
                   Row(
                     children: [
                       if (chat.isPinned) ...[
-                        const Icon(Icons.push_pin_rounded,
-                            size: 13, color: Color(0xFF9AA6B8)),
+                        Icon(Icons.push_pin_rounded,
+                            size: 13, color: cc.secondaryText),
                         const SizedBox(width: 3),
                       ],
                       Expanded(
                         child: Text(
                           chat.name ?? 'Unknown',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1A1A2E),
+                            color: cc.primaryText,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -452,8 +461,8 @@ class _ChatTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           color: chat.unreadCount > 0
-                              ? const Color(0xFF1976D2)
-                              : Colors.grey[500],
+                              ? primary
+                              : cc.secondaryText,
                         ),
                       ),
                     ],
@@ -474,8 +483,8 @@ class _ChatTile extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             color: chat.unreadCount > 0
-                                ? const Color(0xFF1A1A2E)
-                                : Colors.grey[500],
+                                ? cc.primaryText
+                                : cc.secondaryText,
                             fontWeight: chat.unreadCount > 0
                                 ? FontWeight.w500
                                 : FontWeight.normal,
@@ -486,16 +495,16 @@ class _ChatTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       if (chat.isMuted)
-                        const Icon(Icons.volume_off_rounded,
-                            size: 14, color: Color(0xFF9AA6B8)),
+                        Icon(Icons.volume_off_rounded,
+                            size: 14, color: cc.secondaryText),
                       if (chat.unreadCount > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: chat.isMuted
-                                ? const Color(0xFF9AA6B8)
-                                : const Color(0xFF1976D2),
+                                ? cc.secondaryText
+                                : primary,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -519,8 +528,11 @@ class _ChatTile extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cc.pageBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -533,7 +545,7 @@ class _ChatTile extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: cc.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -543,9 +555,10 @@ class _ChatTile extends StatelessWidget {
                 chat.isPinned
                     ? Icons.push_pin_outlined
                     : Icons.push_pin_rounded,
-                color: const Color(0xFF1976D2),
+                color: primary,
               ),
-              title: Text(chat.isPinned ? 'Unpin Chat' : 'Pin Chat'),
+              title: Text(chat.isPinned ? 'Unpin Chat' : 'Pin Chat',
+                  style: TextStyle(color: cc.primaryText)),
               onTap: () {
                 Navigator.pop(context);
                 onPin();
@@ -556,18 +569,20 @@ class _ChatTile extends StatelessWidget {
                 chat.isMuted
                     ? Icons.volume_up_rounded
                     : Icons.volume_off_rounded,
-                color: const Color(0xFF1976D2),
+                color: primary,
               ),
-              title: Text(chat.isMuted ? 'Unmute' : 'Mute'),
+              title: Text(chat.isMuted ? 'Unmute' : 'Mute',
+                  style: TextStyle(color: cc.primaryText)),
               onTap: () {
                 Navigator.pop(context);
                 onMute();
               },
             ),
             ListTile(
-              leading: const Icon(Icons.archive_outlined,
-                  color: Color(0xFF1976D2)),
-              title: const Text('Archive Chat'),
+              leading: Icon(Icons.archive_outlined,
+                  color: primary),
+              title: Text('Archive Chat',
+                  style: TextStyle(color: cc.primaryText)),
               onTap: () {
                 Navigator.pop(context);
                 onArchive();
@@ -648,11 +663,12 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Stack(
       children: [
         CircleAvatar(
           radius: 26,
-          backgroundColor: const Color(0xFFDDE4EF),
+          backgroundColor: cc.surfaceBackground,
           backgroundImage:
               chat.avatar != null ? NetworkImage(chat.avatar!) : null,
           child: chat.avatar == null
@@ -660,7 +676,7 @@ class _Avatar extends StatelessWidget {
                   chat.type == ChatType.group
                       ? Icons.group_rounded
                       : Icons.person_rounded,
-                  color: const Color(0xFF9AA6B8),
+                  color: cc.secondaryText,
                   size: 26,
                 )
               : null,
@@ -675,7 +691,7 @@ class _Avatar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF4CAF50),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: cc.pageBackground, width: 2),
               ),
             ),
           ),
@@ -691,19 +707,21 @@ class _DeliveryIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     switch (status) {
       case MessageStatus.sending:
-        return const Icon(Icons.access_time_rounded,
-            size: 13, color: Color(0xFF9AA6B8));
+        return Icon(Icons.access_time_rounded,
+            size: 13, color: cc.secondaryText);
       case MessageStatus.sent:
-        return const Icon(Icons.check_rounded,
-            size: 14, color: Color(0xFF9AA6B8));
+        return Icon(Icons.check_rounded,
+            size: 14, color: cc.secondaryText);
       case MessageStatus.delivered:
-        return const Icon(Icons.done_all_rounded,
-            size: 14, color: Color(0xFF9AA6B8));
+        return Icon(Icons.done_all_rounded,
+            size: 14, color: cc.secondaryText);
       case MessageStatus.seen:
-        return const Icon(Icons.done_all_rounded,
-            size: 14, color: Color(0xFF1976D2));
+        return Icon(Icons.done_all_rounded,
+            size: 14, color: primary);
       case MessageStatus.failed:
         return const Icon(Icons.error_outline_rounded,
             size: 13, color: Color(0xFFEF4444));

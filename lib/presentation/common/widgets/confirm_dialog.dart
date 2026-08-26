@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 /// Shared confirmation dialog used throughout the app.
 ///
 /// Example:
@@ -20,30 +22,35 @@ class ConfirmDialog {
   }) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(cancel,
-                style: const TextStyle(color: Color(0xFF888888))),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              confirm,
-              style: TextStyle(
-                color: isDangerous
-                    ? const Color(0xFFE53935)
-                    : const Color(0xFF1976D2),
-                fontWeight: FontWeight.w600,
+      builder: (ctx) {
+        final cc      = ctx.cc;
+        final primary = Theme.of(ctx).colorScheme.primary;
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(cancel,
+                  style: TextStyle(color: cc.secondaryText)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                confirm,
+                style: TextStyle(
+                  color: isDangerous
+                      ? const Color(0xFFE53935)
+                      : primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
     return result ?? false;
   }
 }
+

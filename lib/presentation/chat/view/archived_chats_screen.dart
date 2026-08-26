@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
 import '../../../data/repositories/chat_repository.dart';
 
@@ -127,38 +128,43 @@ class _ArchivedChatsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     final state = ref.watch(_archiveProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cc.pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: cc.pageBackground,
+        foregroundColor: cc.primaryText,
         elevation: 0.5,
-        title: const Text(
+        title: Text(
           'Archived Chats',
-          style:
-              TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+          style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 17,
+              color: cc.primaryText),
         ),
       ),
       body: state.isLoading && state.chats.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: primary))
           : state.chats.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.archive_outlined,
-                          size: 56, color: Color(0xFFCCCCCC)),
-                      SizedBox(height: 12),
+                          size: 56, color: cc.secondaryText),
+                      const SizedBox(height: 12),
                       Text('No archived chats',
                           style: TextStyle(
-                              color: Color(0xFFAAAAAA),
+                              color: cc.secondaryText,
                               fontSize: 15)),
                     ],
                   ),
                 )
               : RefreshIndicator(
+                  color: primary,
                   onRefresh: () =>
                       ref.read(_archiveProvider.notifier).refresh(),
                   child: ListView.builder(
@@ -167,10 +173,10 @@ class _ArchivedChatsScreenState
                         (state.hasMore ? 1 : 0),
                     itemBuilder: (_, i) {
                       if (i == state.chats.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
                           child: Center(
-                              child: CircularProgressIndicator()),
+                              child: CircularProgressIndicator(color: primary)),
                         );
                       }
                       final chat = state.chats[i];
@@ -205,12 +211,14 @@ class _ArchiveChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Dismissible(
       key: Key('archive_${chat.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        color: const Color(0xFF1976D2),
+        color: primary,
         padding: const EdgeInsets.only(right: 20),
         child: const Column(
           mainAxisSize: MainAxisSize.min,
@@ -227,10 +235,12 @@ class _ArchiveChatTile extends StatelessWidget {
       },
       child: ListTile(
         onTap: onTap,
-        leading: _buildAvatar(),
+        leading: _buildAvatar(context),
         title: Text(
           chat.name ?? 'Unknown',
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: cc.primaryText),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -239,22 +249,23 @@ class _ArchiveChatTile extends StatelessWidget {
                 _previewText(chat.lastMessage!),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF888888)),
+                style: TextStyle(
+                    fontSize: 13, color: cc.secondaryText),
               )
             : null,
         trailing: chat.lastMessage?.createdAt != null
             ? Text(
                 _formatTime(chat.lastMessage!.createdAt),
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF888888)),
+                style: TextStyle(
+                    fontSize: 11, color: cc.secondaryText),
               )
             : null,
       ),
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final url = chat.avatar;
     if (url != null && url.isNotEmpty) {
       return CircleAvatar(
@@ -264,7 +275,7 @@ class _ArchiveChatTile extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 24,
-      backgroundColor: const Color(0xFF1976D2),
+      backgroundColor: primary,
       child: Text(
         (chat.name ?? '?')[0].toUpperCase(),
         style: const TextStyle(

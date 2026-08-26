@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
@@ -71,8 +72,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF2F7),
+      backgroundColor: cc.surfaceBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -80,18 +82,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cc.cardBackground,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.07),
+                      color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.07),
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-                child: _success ? _buildSuccessView() : _buildFormView(),
+                child: _success ? _buildSuccessView(context) : _buildFormView(context),
               ),
             ],
           ),
@@ -100,7 +102,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     );
   }
 
-  Widget _buildFormView() {
+  Widget _buildFormView(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Form(
       key: _formKey,
       child: Column(
@@ -109,10 +113,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           Center(
             child: Text(
               AppStrings.resetPasswordTitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                color: cc.primaryText,
               ),
             ),
           ),
@@ -121,7 +125,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             child: Text(
               AppStrings.resetPasswordSubtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 13, color: cc.secondaryText),
             ),
           ),
           const SizedBox(height: 28),
@@ -131,7 +135,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            decoration: _inputDecoration(AppStrings.emailHint),
+            style: TextStyle(color: cc.primaryText),
+            decoration: _inputDecoration(context, AppStrings.emailHint),
             validator: (v) {
               if (v == null || v.trim().isEmpty) {
                 return AppStrings.emailRequiredError;
@@ -149,7 +154,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           TextFormField(
             controller: _codeCtrl,
             textInputAction: TextInputAction.next,
-            decoration: _inputDecoration('Enter code from email'),
+            style: TextStyle(color: cc.primaryText),
+            decoration: _inputDecoration(context, 'Enter code from email'),
             validator: (v) => (v == null || v.trim().isEmpty)
                 ? 'Verification code is required'
                 : null,
@@ -161,14 +167,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             controller: _passwordCtrl,
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.next,
+            style: TextStyle(color: cc.primaryText),
             decoration:
-                _inputDecoration(AppStrings.newPasswordHint).copyWith(
+                _inputDecoration(context, AppStrings.newPasswordHint).copyWith(
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: Colors.grey[500],
+                  color: cc.secondaryText,
                   size: 22,
                 ),
                 onPressed: () =>
@@ -195,15 +202,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             controller: _confirmCtrl,
             obscureText: _obscureConfirm,
             textInputAction: TextInputAction.done,
+            style: TextStyle(color: cc.primaryText),
             onFieldSubmitted: (_) => _onReset(),
-            decoration: _inputDecoration(AppStrings.confirmPasswordHint)
+            decoration: _inputDecoration(context, AppStrings.confirmPasswordHint)
                 .copyWith(
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureConfirm
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: Colors.grey[500],
+                  color: cc.secondaryText,
                   size: 22,
                 ),
                 onPressed: () =>
@@ -251,7 +259,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _onReset,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1976D2),
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -280,10 +288,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           Center(
             child: TextButton(
               onPressed: () => context.go(Routes.login),
-              child: const Text(
+              child: Text(
                 AppStrings.backToLogin,
                 style: TextStyle(
-                  color: Color(0xFF1976D2),
+                  color: primary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -295,7 +303,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     );
   }
 
-  Widget _buildSuccessView() {
+  Widget _buildSuccessView(BuildContext context) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -312,10 +322,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         Text(
           AppStrings.passwordResetSuccess,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
+            color: cc.primaryText,
             height: 1.5,
           ),
         ),
@@ -326,7 +336,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           child: ElevatedButton(
             onPressed: () => context.go(Routes.login),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
+              backgroundColor: primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -346,23 +356,25 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
+  InputDecoration _inputDecoration(BuildContext context, String hint) {
+    final cc = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    return InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+        hintStyle: TextStyle(color: cc.secondaryText, fontSize: 14),
         filled: true,
-        fillColor: const Color(0xFFF2F4F8),
+        fillColor: cc.inputBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: cc.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: cc.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF1976D2), width: 1.5),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -370,12 +382,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       );
+  }
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -384,13 +396,14 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = context.cc;
     return RichText(
       text: TextSpan(
         text: '$label: ',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A2E),
+          color: cc.primaryText,
         ),
         children: const [
           TextSpan(
