@@ -29,6 +29,7 @@ class ChatModel {
     this.isBlockedByMe = false,
     this.isOnline = false,
     this.action,
+    this.lastActive,
     this.createdAt,
     this.updatedAt,
   });
@@ -49,6 +50,9 @@ class ChatModel {
   final bool isBlockedByMe;  // current user IS the one who blocked
   final bool isOnline;       // other user is online (direct chats)
   final ChatAction? action;  // typing indicator
+  /// Last activity timestamp of the other user (direct chat) — mirrors RN
+  /// `chat.lastActive`. Used for the "Active X ago" subtitle when offline.
+  final String? lastActive;
   final String? createdAt;
   final String? updatedAt;
 
@@ -111,6 +115,8 @@ class ChatModel {
       isBlocked: _toBool(json['blocked'] ?? json['isBlocked']),
       isBlockedByMe: _toBool(json['blockedMe'] ?? json['is_blocked_by_me']),
       isOnline: _toBool(onlineRaw),
+      lastActive: (chatInfo['lastActive'] ?? chatInfo['last_active']
+          ?? chatInfo['lastSeen'] ?? chatInfo['last_seen'])?.toString(),
       createdAt: (chatInfo['createdAt'] ?? chatInfo['created_at'])?.toString(),
       updatedAt: (chatInfo['updatedAt'] ?? chatInfo['updated_at'])?.toString(),
     );
@@ -130,6 +136,7 @@ class ChatModel {
         'isBlocked': isBlocked,
         'isBlockedByMe': isBlockedByMe,
         'isOnline': isOnline,
+        if (lastActive != null) 'lastActive': lastActive,
         if (createdAt != null) 'createdAt': createdAt,
         if (updatedAt != null) 'updatedAt': updatedAt,
       };
@@ -146,6 +153,7 @@ class ChatModel {
     bool? isBlockedByMe,
     bool? isOnline,
     ChatAction? action,
+    String? lastActive,
   }) =>
       ChatModel(
         id: id,
@@ -162,6 +170,7 @@ class ChatModel {
         isBlockedByMe: isBlockedByMe ?? this.isBlockedByMe,
         isOnline: isOnline ?? this.isOnline,
         action: action ?? this.action,
+        lastActive: lastActive ?? this.lastActive,
         createdAt: createdAt,
         updatedAt: updatedAt,
       );

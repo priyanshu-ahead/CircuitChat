@@ -67,6 +67,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     super.initState();
     _textCtrl.addListener(() => setState(() {}));
     _scrollCtrl.addListener(_onScroll);
+    // Ensure active-users presence data is loaded even if the chat-list
+    // screen was never opened (mirrors RN which always fetches /friend/active).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(activeUsersViewModelProvider.notifier).loadOnce();
+    });
   }
 
   void _onScroll() {
@@ -591,8 +596,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         .firstOrNull ?? widget.chat;
 
     final bool isDirect   = chat.type == ChatType.direct;
-    final UserModel? otherUser = isDirect ? chat.members.firstOrNull : null;
-    final String? otherId = otherUser?.id;
+    // In SocialEngine, for a direct chat the chat._id IS the other user's _id.
+    // The members array is often empty from the list API response, so we
+    // prefer chat.id as the lookup key (mirrors RN: state.users[id]).
+    final String? otherId  = isDirect ? chat.id : null;
+    final UserModel? otherUser = isDirect
+        ? (activeUsers[otherId] ?? chat.members.firstOrNull)
+        : null;
     final bool isOnline   = chat.isOnline ||
         (otherId != null && activeUsers[otherId]?.active == true);
 
@@ -648,56 +658,95 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                           fontSize: 16, fontWeight: FontWeight.w700,
                           color: cc.primaryText),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-                  // ── Online / typing / last seen subtitle ────────────────
-                  if (msgState.isTyping)
-                    Text('typing…',
-                        style: TextStyle(fontSize: 12,
-                            color: primary,
-                            fontStyle: FontStyle.italic))
-                  else if (isOnline && isDirect)
-                    Row(
-                      children: [
-                        Container(
-                          width: 7, height: 7,
-                          margin: const EdgeInsets.only(right: 4),
-                          decoration: const BoxDecoration(
-                              color: Color(0xFF0ED00E),
-                              shape: BoxShape.circle),
-                        ),
-                        Text('Online',
+                  // ── Status subtitle mirrors RN UserStatusText / header.js ──
+                  Builder(builder: (_) {
+                    // Typing takes priority
+                    if (msgState.isTyping) {
+                      return Text('typing…',
+                          style: TextStyle(fontSize: 12,
+                              color: primary,
+                              fontStyle: FontStyle.italic));
+                    }
+
+                    if (isDirect) {
+                      // Use live data from activeUsersProvider first
+                      final liveUser = otherId != null
+                          ? activeUsers[otherId]
+                          : null;
+                      // Merge: liveUser if available, else otherUser from chat
+                      final u = liveUser ?? otherUser;
+
+                      if (u != null && u.active) {
+                        // state: 1=active, 2=away, 3=dnd, 0=offline
+                        switch (u.state) {
+                          case 1: // Active / online
+                            return Text('Active',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: const Color(0xFF4CAF50),
+                                    fontWeight: FontWeight.w500));
+                          case 2: // Away
+                            return Text(
+                              u.lastSeen != null
+                                  ? 'Active ${_fromNow(u.lastSeen!)}'
+                                  : 'Active',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: const Color(0xFFFFC107)));
+                          case 3: // Do not disturb
+                            return Text('Do not disturb',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: const Color(0xFFE53935)));
+                          default:
+                            return Text('Active',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: const Color(0xFF4CAF50),
+                                    fontWeight: FontWeight.w500));
+                        }
+                      } else if (u?.lastSeen != null) {
+                        // Offline but we have a lastSeen/lastActive from activeUsers
+                        return Text(
+                          'Active ${_fromNow(u!.lastSeen!)}',
+                          style: TextStyle(
+                              fontSize: 12, color: cc.secondaryText),
+                        );
+                      } else if (chat.lastActive != null) {
+                        // Fallback: use chat.lastActive from API — mirrors RN's
+                        // `user?.lastActive || chat?.lastActive` check
+                        return Text(
+                          'Active ${_fromNow(chat.lastActive!)}',
+                          style: TextStyle(
+                              fontSize: 12, color: cc.secondaryText),
+                        );
+                      } else if (chat.isOnline) {
+                        return Text('Active',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: cc.secondaryText)),
-                      ],
-                    )
-                  else if (isDirect &&
-                      chat.members.isNotEmpty &&
-                      chat.members.first.lastSeen != null)
-                    Text(
-                      _formatLastSeen(
-                          chat.members.first.lastSeen!),
-                      style: TextStyle(
-                          fontSize: 12, color: cc.secondaryText),
-                    )
-                  else if (isDirect && otherUser?.lastSeen != null)
-                    Text(
-                      _formatLastSeen(otherUser!.lastSeen!),
-                      style: TextStyle(
-                          fontSize: 12, color: cc.secondaryText),
-                    )
-                  else if (isDirect)
-                    Text(
-                      'Offline',
-                      style: TextStyle(
-                          fontSize: 12, color: cc.secondaryText),
-                    )
-                  else if (chat.type == ChatType.group)
-                    // For groups: show member count as subtitle
-                    Text(
-                      '${chat.members.length} members',
-                      style: TextStyle(
-                          fontSize: 12, color: cc.secondaryText),
-                    ),
+                                color: const Color(0xFF4CAF50),
+                                fontWeight: FontWeight.w500));
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    } else {
+                      // Group: show online member names (mirrors RN logic)
+                      final onlineNames = chat.members
+                          .where((m) => activeUsers.containsKey(m.id))
+                          .map((m) => m.name.split(' ').first)
+                          .take(5)
+                          .join(', ');
+                      return Text(
+                        onlineNames.isNotEmpty
+                            ? onlineNames
+                            : '${chat.members.length} members',
+                        style: TextStyle(
+                            fontSize: 12, color: cc.secondaryText),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    }
+                  }),
                 ],
               ),
             ),
@@ -2282,22 +2331,24 @@ class _TypingDotState extends State<_TypingDot>
 
 /// Formats a last-seen ISO timestamp into a human-readable string.
 /// Mirrors RN's `moment(lastActive).fromNow()`.
-String _formatLastSeen(String iso) {
+/// Returns a human-readable relative time string matching RN's
+/// `moment(date).fromNow()` — e.g. "just now", "2 minutes ago", "3 hours ago".
+String _fromNow(String iso) {
   try {
     final dt   = DateTime.parse(iso).toLocal();
-    final now  = DateTime.now();
-    final diff = now.difference(dt);
-
-    if (diff.inMinutes < 1)  return 'Last seen just now';
-    if (diff.inMinutes < 60) return 'Last seen ${diff.inMinutes}m ago';
-    if (diff.inHours   < 24) return 'Last seen ${diff.inHours}h ago';
-    if (diff.inDays    < 7)  return 'Last seen ${diff.inDays}d ago';
-
-    return 'Last seen ${DateFormat('MMM d').format(dt)}';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60)  return 'just now';
+    if (diff.inMinutes < 60)  return '${diff.inMinutes} minute${diff.inMinutes == 1 ? '' : 's'} ago';
+    if (diff.inHours   < 24)  return '${diff.inHours} hour${diff.inHours == 1 ? '' : 's'} ago';
+    if (diff.inDays    < 7)   return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+    return '${(diff.inDays / 7).floor()} week${(diff.inDays / 7).floor() == 1 ? '' : 's'} ago';
   } catch (_) {
     return '';
   }
 }
+
+// Keep for any other callers that use old naming
+String _formatLastSeen(String iso) => _fromNow(iso);
 
 // ── Compact AppBar icon button ────────────────────────────────────────────────
 
