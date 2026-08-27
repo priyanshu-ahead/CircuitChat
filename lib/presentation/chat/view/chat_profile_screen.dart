@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/providers.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/chat_model.dart';
@@ -46,9 +47,9 @@ class _DirectProfile extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 260,
+            expandedHeight: 220,
             pinned: true,
-            backgroundColor: cc.surfaceBackground,
+            backgroundColor: cc.pageBackground,
             foregroundColor: cc.primaryText,
             elevation: 0.5,
             flexibleSpace: FlexibleSpaceBar(
@@ -61,19 +62,14 @@ class _DirectProfile extends ConsumerWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Color(0x99000000),
-                        ],
+                        colors: [Colors.transparent, Color(0x99000000)],
                       ),
                     ),
                   ),
                 ],
               ),
-              title: Text(
-                chat.name ?? '',
-                style: const TextStyle(color: Colors.white),
-              ),
+              title: Text(chat.name ?? '',
+                  style: const TextStyle(color: Colors.white)),
               titlePadding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
             ),
           ),
@@ -81,84 +77,74 @@ class _DirectProfile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Online status
                 if (chat.isOnline)
-                  Container(
-                    color: cc.cardBackground,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    child: const Row(
-                      children: [
-                        CircleAvatar(
-                            radius: 5,
-                            backgroundColor: Color(0xFF43A047)),
-                        SizedBox(width: 6),
-                        Text('Online',
-                            style: TextStyle(
-                                color: Color(0xFF43A047),
-                                fontSize: 13)),
-                      ],
-                    ),
+                  _InfoRow(
+                    icon: Icons.circle,
+                    iconColor: const Color(0xFF43A047),
+                    iconSize: 10,
+                    value: 'Online',
                   ),
-                // About / Bio
                 if (other?.bio != null && other!.bio!.isNotEmpty)
-                  _InfoCard(
-                    label: 'About',
-                    value: other.bio!,
-                  ),
-                // Phone
+                  _InfoRow(
+                      icon: Icons.info_outline_rounded,
+                      label: 'About',
+                      value: other.bio!),
                 if (other?.phone != null && other!.phone!.isNotEmpty)
-                  _InfoCard(label: 'Phone', value: other.phone!),
-                const SizedBox(height: 12),
-                // Actions
-                _ActionsCard(
-                  actions: [
-                    _ProfileAction(
-                      icon: Icons.photo_library_outlined,
-                      label: 'Media',
-                      onTap: () => context.push(
-                        Routes.chatMedia
-                            .replaceFirst(':chatId', chat.id),
-                        extra: chat,
-                      ),
-                    ),
-                    _ProfileAction(
-                      icon: Icons.star_outline_rounded,
-                      label: 'Starred',
-                      onTap: () => context.push(
-                        Routes.chatStarred
-                            .replaceFirst(':chatId', chat.id),
-                        extra: chat,
-                      ),
-                    ),
-                  ],
+                  _InfoRow(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: other.phone!),
+                const SizedBox(height: 8),
+                _Divider(),
+                // ── Actions as list ───────────────────────────────────────
+                _ListAction(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Media, Links & Docs',
+                  onTap: () => context.push(
+                      Routes.chatMedia.replaceFirst(':chatId', chat.id),
+                      extra: chat),
                 ),
-                const SizedBox(height: 12),
-                // Block / Mute
-                _ActionsCard(
-                  actions: [
-                    _ProfileAction(
-                      icon: chat.isMuted
-                          ? Icons.volume_up_outlined
-                          : Icons.volume_off_outlined,
-                      label: chat.isMuted ? 'Unmute' : 'Mute',
-                      onTap: () => _toggleMute(context, ref),
-                    ),
-                    _ProfileAction(
-                      icon: chat.isBlockedByMe
-                          ? Icons.block_flipped
-                          : Icons.block_rounded,
-                      label: chat.isBlockedByMe ? 'Unblock' : 'Block',
-                      color: const Color(0xFFE53935),
-                      onTap: () => _confirmBlock(context, ref),
-                    ),
-                    _ProfileAction(
-                      icon: Icons.flag_outlined,
-                      label: 'Report',
-                      color: const Color(0xFFE53935),
-                      onTap: () {},
-                    ),
-                  ],
+                _Divider(),
+                _ListAction(
+                  icon: Icons.star_outline_rounded,
+                  label: 'Starred Messages',
+                  onTap: () => context.push(
+                      Routes.chatStarred.replaceFirst(':chatId', chat.id),
+                      extra: chat),
+                ),
+                _Divider(),
+                const SizedBox(height: 8),
+                _Divider(),
+                _ListAction(
+                  icon: chat.isMuted
+                      ? Icons.volume_up_outlined
+                      : Icons.volume_off_outlined,
+                  label: chat.isMuted ? 'Unmute' : 'Mute Notifications',
+                  onTap: () {
+                    final repo = ref.read(chatRepositoryProvider);
+                    if (chat.isMuted) {
+                      repo.unmuteChat(chat.id);
+                    } else {
+                      repo.muteChat(chat.id);
+                    }
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                ),
+                _Divider(),
+                _ListAction(
+                  icon: chat.isBlockedByMe
+                      ? Icons.block_flipped
+                      : Icons.block_rounded,
+                  label: chat.isBlockedByMe ? 'Unblock User' : 'Block User',
+                  color: const Color(0xFFE53935),
+                  onTap: () => _confirmBlock(context, ref),
+                ),
+                _Divider(),
+                _ListAction(
+                  icon: Icons.flag_outlined,
+                  label: 'Report',
+                  color: const Color(0xFFE53935),
+                  onTap: () {},
                 ),
                 const SizedBox(height: 32),
               ],
@@ -166,20 +152,6 @@ class _DirectProfile extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _toggleMute(BuildContext context, WidgetRef ref) {
-    final repo = ref.read(chatRepositoryProvider);
-    if (chat.isMuted) {
-      repo.unmuteChat(chat.id);
-    } else {
-      repo.muteChat(chat.id);
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content:
-              Text(chat.isMuted ? 'Chat unmuted.' : 'Chat muted.')),
     );
   }
 
@@ -194,18 +166,19 @@ class _DirectProfile extends ConsumerWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
+              child: Text('Cancel',
+                  style: TextStyle(color: cc.secondaryText))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(action,
-                  style: const TextStyle(color: Color(0xFFE53935)))),
+                  style:
+                      const TextStyle(color: Color(0xFFE53935)))),
         ],
       ),
     );
     if (confirmed == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$action action sent.')),
-      );
+        SnackBar(content: Text('$action action sent.')));
     }
   }
 }
@@ -223,29 +196,39 @@ class _GroupProfile extends ConsumerWidget {
     final groupState = ref.watch(groupViewModelProvider(chat.id));
     final group = groupState.group;
 
+    // ── Member count: from API memberCount field, or loaded members page ─
+    // groupState.members is populated by the auto-load in GroupViewModel._load()
+    final memberCount = group?.memberCount != null && group!.memberCount > 0
+        ? group.memberCount
+        : groupState.members.isNotEmpty
+            ? groupState.members.length
+            : null;
+
     return Scaffold(
       backgroundColor: cc.surfaceBackground,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 260,
+            expandedHeight: 220,
             pinned: true,
-            backgroundColor: cc.surfaceBackground,
+            backgroundColor: cc.pageBackground,
             foregroundColor: cc.primaryText,
             elevation: 0.5,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _buildHeroAvatar(
-                      context,
+                  _buildHeroAvatar(context,
                       chat.avatar ?? group?.avatar, chat.name ?? ''),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0x99000000)],
+                        colors: [
+                          Colors.transparent,
+                          Color(0x99000000)
+                        ],
                       ),
                     ),
                   ),
@@ -260,100 +243,118 @@ class _GroupProfile extends ConsumerWidget {
             child: groupState.isLoading
                 ? Padding(
                     padding: const EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator(color: primary)))
+                    child: Center(
+                        child:
+                            CircularProgressIndicator(color: primary)))
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Member count
-                      _InfoCard(
+                      // About
+                      if (group?.about != null &&
+                          group!.about!.isNotEmpty)
+                        _InfoRow(
+                            icon: Icons.info_outline_rounded,
+                            label: 'About',
+                            value: group.about!),
+
+                      // Member count — tappable to open full list
+                      _InfoRow(
+                        icon: Icons.people_outline_rounded,
                         label: 'Members',
-                        value:
-                            '${group?.memberCount ?? chat.members.length}',
+                        value: memberCount != null
+                            ? '$memberCount members'
+                            : 'Loading…',
+                        onTap: () => context.push(
+                          Routes.groupMembers
+                              .replaceFirst(':groupId', chat.id),
+                        ),
                       ),
-                      if (group?.about != null && group!.about!.isNotEmpty)
-                        _InfoCard(label: 'About', value: group.about!),
-                      const SizedBox(height: 12),
-                      // Quick actions
-                      _ActionsCard(actions: [
-                        _ProfileAction(
-                          icon: Icons.people_outline_rounded,
-                          label: 'Members',
-                          onTap: () => context.push(
-                            Routes.groupMembers
-                                .replaceFirst(':groupId', chat.id),
-                          ),
+
+                      const SizedBox(height: 8),
+                      _Divider(),
+
+                      // ── Actions as list ───────────────────────────────
+                      _ListAction(
+                        icon: Icons.people_outline_rounded,
+                        label: 'View Members',
+                        onTap: () => context.push(
+                          Routes.groupMembers
+                              .replaceFirst(':groupId', chat.id),
                         ),
-                        _ProfileAction(
-                          icon: Icons.photo_library_outlined,
-                          label: 'Media',
-                          onTap: () => context.push(
-                            Routes.chatMedia
-                                .replaceFirst(':chatId', chat.id),
-                            extra: chat,
-                          ),
+                      ),
+                      _Divider(),
+                      _ListAction(
+                        icon: Icons.photo_library_outlined,
+                        label: 'Media, Links & Docs',
+                        onTap: () => context.push(
+                          Routes.chatMedia
+                              .replaceFirst(':chatId', chat.id),
+                          extra: chat,
                         ),
-                        _ProfileAction(
-                          icon: Icons.star_outline_rounded,
-                          label: 'Starred',
-                          onTap: () => context.push(
-                            Routes.chatStarred
-                                .replaceFirst(':chatId', chat.id),
-                            extra: chat,
-                          ),
+                      ),
+                      _Divider(),
+                      _ListAction(
+                        icon: Icons.star_outline_rounded,
+                        label: 'Starred Messages',
+                        onTap: () => context.push(
+                          Routes.chatStarred
+                              .replaceFirst(':chatId', chat.id),
+                          extra: chat,
                         ),
-                      ]),
-                      const SizedBox(height: 12),
-                      // Group management
-                      _ActionsCard(actions: [
-                        _ProfileAction(
-                          icon: Icons.settings_outlined,
-                          label: 'Group Settings',
-                          onTap: () => context.push(
-                            Routes.groupSettings
-                                .replaceFirst(':groupId', chat.id),
-                          ),
+                      ),
+                      _Divider(),
+                      _ListAction(
+                        icon: Icons.settings_outlined,
+                        label: 'Group Settings',
+                        onTap: () => context.push(
+                          Routes.groupSettings
+                              .replaceFirst(':groupId', chat.id),
                         ),
-                        _ProfileAction(
-                          icon: Icons.link_rounded,
-                          label: 'Invite Link',
-                          onTap: () => context.push(
-                            Routes.groupInvite
-                                .replaceFirst(':groupId', chat.id),
-                          ),
+                      ),
+                      _Divider(),
+                      _ListAction(
+                        icon: Icons.link_rounded,
+                        label: 'Invite Link',
+                        onTap: () => context.push(
+                          Routes.groupInvite
+                              .replaceFirst(':groupId', chat.id),
                         ),
-                        _ProfileAction(
-                          icon: Icons.pending_actions_rounded,
-                          label: 'Pending',
-                          onTap: () => context.push(
-                            Routes.groupPending
-                                .replaceFirst(':groupId', chat.id),
-                          ),
+                      ),
+                      _Divider(),
+                      _ListAction(
+                        icon: Icons.pending_actions_rounded,
+                        label: 'Pending Requests',
+                        onTap: () => context.push(
+                          Routes.groupPending
+                              .replaceFirst(':groupId', chat.id),
                         ),
-                      ]),
-                      const SizedBox(height: 12),
-                      // Leave / Mute
-                      _ActionsCard(actions: [
-                        _ProfileAction(
-                          icon: chat.isMuted
-                              ? Icons.volume_up_outlined
-                              : Icons.volume_off_outlined,
-                          label: chat.isMuted ? 'Unmute' : 'Mute',
-                          onTap: () {
-                            final repo = ref.read(chatRepositoryProvider);
-                            if (chat.isMuted) {
-                              repo.unmuteChat(chat.id);
-                            } else {
-                              repo.muteChat(chat.id);
-                            }
-                          },
-                        ),
-                        _ProfileAction(
-                          icon: Icons.exit_to_app_rounded,
-                          label: 'Leave Group',
-                          color: const Color(0xFFE53935),
-                          onTap: () => _confirmLeave(context, ref),
-                        ),
-                      ]),
+                      ),
+                      const SizedBox(height: 8),
+                      _Divider(),
+                      _ListAction(
+                        icon: chat.isMuted
+                            ? Icons.volume_up_outlined
+                            : Icons.volume_off_outlined,
+                        label: chat.isMuted
+                            ? 'Unmute Notifications'
+                            : 'Mute Notifications',
+                        onTap: () {
+                          final repo = ref.read(chatRepositoryProvider);
+                          if (chat.isMuted) {
+                            repo.unmuteChat(chat.id);
+                          } else {
+                            repo.muteChat(chat.id);
+                          }
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                      ),
+                      _Divider(),
+                      _ListAction(
+                        icon: Icons.exit_to_app_rounded,
+                        label: 'Leave Group',
+                        color: const Color(0xFFE53935),
+                        onTap: () => _confirmLeave(context, ref),
+                      ),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -374,7 +375,8 @@ class _GroupProfile extends ConsumerWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(color: cc.secondaryText))),
+              child: Text('Cancel',
+                  style: TextStyle(color: cc.secondaryText))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Leave',
@@ -386,16 +388,15 @@ class _GroupProfile extends ConsumerWidget {
       final ok = await ref
           .read(groupViewModelProvider(chat.id).notifier)
           .leaveGroup();
-      if (ok && context.mounted) {
-        context.go(Routes.chatList);
-      }
+      if (ok && context.mounted) context.go(Routes.chatList);
     }
   }
 }
 
-// ── Shared helpers ────────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
-Widget _buildHeroAvatar(BuildContext context, String? url, String name) {
+Widget _buildHeroAvatar(
+    BuildContext context, String? url, String name) {
   if (url != null && url.isNotEmpty) {
     return CachedNetworkImage(
       imageUrl: url,
@@ -422,87 +423,116 @@ Widget _fallbackAvatar(BuildContext context, String name) {
   );
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.label, required this.value});
-  final String label;
-  final String value;
+// ── Info row — icon + label + value ──────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    final cc = context.cc;
-    return Container(
-      color: cc.cardBackground,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: cc.secondaryText,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(value,
-              style: TextStyle(fontSize: 15, color: cc.primaryText)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionsCard extends StatelessWidget {
-  const _ActionsCard({required this.actions});
-  final List<_ProfileAction> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final cc = context.cc;
-    return Container(
-      color: cc.cardBackground,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: actions
-            .map((a) => Expanded(child: _ActionButton(action: a)))
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _ProfileAction {
-  const _ProfileAction({
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
     required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
+    required this.value,
+    this.label,
+    this.iconColor,
+    this.iconSize,
+    this.onTap,
   });
   final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? color;
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.action});
-  final _ProfileAction action;
+  final String   value;
+  final String?  label;
+  final Color?   iconColor;
+  final double?  iconSize;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final color = action.color ?? primary;
+    final cc = context.cc;
     return InkWell(
-      onTap: action.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
+      onTap: onTap,
+      child: Container(
+        color: cc.cardBackground,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(action.icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(action.label,
-                style: TextStyle(fontSize: 12, color: color)),
+            Icon(icon,
+                color: iconColor ?? cc.secondaryText,
+                size: iconSize ?? 20),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (label != null)
+                    Text(label!,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: cc.secondaryText,
+                            fontWeight: FontWeight.w500)),
+                  if (label != null) const SizedBox(height: 2),
+                  Text(value,
+                      style: TextStyle(
+                          fontSize: 15, color: cc.primaryText)),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(Icons.chevron_right_rounded,
+                  color: cc.secondaryText, size: 18),
           ],
         ),
       ),
     );
   }
+}
+
+// ── Action list item ──────────────────────────────────────────────────────────
+
+class _ListAction extends StatelessWidget {
+  const _ListAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+  final IconData     icon;
+  final String       label;
+  final VoidCallback onTap;
+  final Color?       color;
+
+  @override
+  Widget build(BuildContext context) {
+    final cc      = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    final c       = color ?? primary;
+    return Material(
+      color: cc.cardBackground,
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: c.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: c, size: 20),
+        ),
+        title: Text(label,
+            style: TextStyle(
+                fontSize: 15,
+                color: color ?? cc.primaryText,
+                fontWeight: FontWeight.w500)),
+        trailing: Icon(Icons.chevron_right_rounded,
+            color: cc.secondaryText, size: 18),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      ),
+    );
+  }
+}
+
+// ── Section divider ───────────────────────────────────────────────────────────
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Divider(height: 1, indent: 66, color: context.cc.divider);
 }

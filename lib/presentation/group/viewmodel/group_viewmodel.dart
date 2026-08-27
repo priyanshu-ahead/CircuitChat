@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/di/providers.dart';
 import '../../../data/models/group_model.dart';
 import '../../../data/repositories/group_repository.dart';
@@ -82,11 +86,20 @@ class GroupViewModel extends FamilyNotifier<GroupState, String> {
     state = state.copyWith(status: GroupStatus.loading);
     final result = await _repo.getGroupInfo(_groupId);
     if (result.success && result.data != null) {
+      final group = result.data!;
+      // Seed state.members immediately from the embedded members that
+      // getGroupInfo returns — mirrors RN which reads group.members directly.
+      // This ensures memberCount shows instantly without waiting for loadMembers.
+      final embeddedMembers = group.members;
       state = state.copyWith(
-        group: result.data,
-        status: GroupStatus.success,
+        group:   group,
+        status:  GroupStatus.success,
+        members: embeddedMembers.isNotEmpty ? embeddedMembers : state.members,
         clearError: true,
       );
+      // Also load from the dedicated members endpoint to get the full paginated
+      // list (which uses the 'users' key in its response).
+      unawaited(loadMembers(refresh: embeddedMembers.isEmpty));
     } else {
       state = state.copyWith(
         status: GroupStatus.error,

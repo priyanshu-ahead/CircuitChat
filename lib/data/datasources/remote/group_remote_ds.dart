@@ -105,11 +105,17 @@ class GroupRemoteDataSource implements GroupRepository {
           'limit': params.limit,
         },
       );
-      final list = (raw['members'] as List? ?? raw['data'] as List? ?? [])
+      // SE /group/members/:id returns members under 'users', 'members', or 'data'
+      // (confirmed from RN call.js: response.data.users)
+      final list = (raw['users'] as List?
+              ?? raw['members'] as List?
+              ?? raw['data'] as List?
+              ?? [])
           .whereType<Map<String, dynamic>>()
           .map((e) => GroupMember.fromJson(e))
           .toList();
       return _success(list);
+
     } catch (e) {
       return _failure(e);
     }

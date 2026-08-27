@@ -51,9 +51,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   bool    _searchMode         = false;
   String? _recordingPath;
 
-  // ── Recording timer & preview ─────────────────────────────────────────────
+  // ── Recording timer ───────────────────────────────────────────────────────
   int    _recordingSeconds = 0;
   Timer? _recordingTimer;
+
+  // ── Search navigation ─────────────────────────────────────────────────────
+  int _searchMatchIndex = 0; // current result index (0-based)
 
   String? get _currentUserId => ref.read(authViewModelProvider).user?.id;
 
@@ -67,6 +70,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   void initState() {
     super.initState();
     _textCtrl.addListener(() => setState(() {}));
+    _searchCtrl.addListener(() => setState(() {})); // rebuild clear button
     _scrollCtrl.addListener(_onScroll);
     // Ensure active-users presence data is loaded even if the chat-list
     // screen was never opened (mirrors RN which always fetches /friend/active).
@@ -106,6 +110,25 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut);
     }
+  }
+
+  /// Scrolls the list to the message at [index] in search results.
+  /// With reverse:true, index 0 = newest (bottom). The search results are
+  /// returned newest-first from the API, so index 0 = most recent match.
+  void _scrollToMatchIndex(int index, int total) {
+    if (!_scrollCtrl.hasClients || total == 0) return;
+    // Estimate item height ~60px and scroll to approximate position
+    // A more precise scroll would require item keys and RenderBox lookups.
+    final itemHeight = 72.0;
+    final maxScroll  = _scrollCtrl.position.maxScrollExtent;
+    // index 0 = bottom (pixels = 0), index total-1 = top (pixels = max)
+    final targetPixels =
+        (index / (total - 1).clamp(1, total - 1)) * maxScroll;
+    _scrollCtrl.animateTo(
+      targetPixels.clamp(0, maxScroll),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   // ── Send text ─────────────────────────────────────────────────────────────
@@ -156,67 +179,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   // ── In-chat search ────────────────────────────────────────────────────────
-
-  PreferredSize _buildSearchBar() {
-    final cc = context.cc;
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(52),
-      child: Container(
-        color: cc.cardBackground,
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-        child: Row(
-          children: [
-            IconButton(
-              icon: Icon(Icons.arrow_back_rounded,
-                  color: cc.primaryText),
-              onPressed: () {
-                setState(() { _searchMode = false; _searchCtrl.clear(); });
-                ref.read(messageViewModelProvider(_vmArg).notifier)
-                    .clearSearch();
-              },
-            ),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                style: TextStyle(color: cc.primaryText),
-                decoration: InputDecoration(
-                  hintText: AppStrings.search_messages,
-                  hintStyle: TextStyle(color: cc.secondaryText),
-                  filled: true,
-                  fillColor: cc.searchBackground,
-                  contentPadding: const EdgeInsets.symmetric(
-                      vertical: 8, horizontal: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  suffixIcon: _searchCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.close_rounded, size: 18, color: cc.secondaryText),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            ref.read(messageViewModelProvider(_vmArg)
-                                .notifier).clearSearch();
-                          })
-                      : null,
-                ),
-                onChanged: (q) {
-                  if (q.trim().length >= 2) {
-                    ref.read(messageViewModelProvider(_vmArg).notifier)
-                        .searchMessages(q.trim());
-                  } else if (q.isEmpty) {
-                    ref.read(messageViewModelProvider(_vmArg).notifier)
-                        .clearSearch();
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ── Chat options bottom sheet ─────────────────────────────────────────────
   // All items mirror RN's components/options.js Menus component.
@@ -592,6 +554,146 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final cc           = context.cc;
     final primary      = Theme.of(context).colorScheme.primary;
     final agoraEnabled = ref.watch(appInitProvider).agoraEnabled;
+
+    // ── Search mode: profile bar is fully replaced by a search bar ────────
+    if (_searchMode) {
+      final msgState = ref.read(messageViewModelProvider(_vmArg));
+      final totalMatches = msgState.messages.length;
+      final hasMatches = _searchCtrl.text.trim().length >= 2;
+
+      return AppBar(
+        backgroundColor: cc.pageBackground,
+        elevation: 0,
+        titleSpacing: 0,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            // Back → exit search mode
+            IconButton(
+              icon: Icon(Icons.arrow_back_rounded, color: cc.primaryText),
+              onPressed: () {
+                setState(() {
+                  _searchMode       = false;
+                  _searchMatchIndex = 0;
+                  _searchCtrl.clear();
+                });
+                ref.read(messageViewModelProvider(_vmArg).notifier)
+                    .clearSearch();
+              },
+            ),
+            // Search input — autofocus, full width
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                style: TextStyle(color: cc.primaryText, fontSize: 15),
+                decoration: InputDecoration(
+                  hintText: 'Search messages…',
+                  hintStyle: TextStyle(color: cc.secondaryText, fontSize: 15),
+                  filled: true,
+                  fillColor: cc.inputBackground,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (q) {
+                  setState(() => _searchMatchIndex = 0);
+                  if (q.trim().length >= 2) {
+                    ref.read(messageViewModelProvider(_vmArg).notifier)
+                        .searchMessages(q.trim());
+                  } else if (q.isEmpty) {
+                    ref.read(messageViewModelProvider(_vmArg).notifier)
+                        .clearSearch();
+                  }
+                },
+              ),
+            ),
+
+            // ── Match counter + up/down navigation ───────────────────────
+            if (hasMatches && totalMatches > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '${_searchMatchIndex + 1}/$totalMatches',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: cc.secondaryText,
+                    fontWeight: FontWeight.w500),
+              ),
+              // Up — previous match
+              SizedBox(
+                width: 36,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: Icon(Icons.keyboard_arrow_up_rounded,
+                      color: cc.primaryText, size: 22),
+                  onPressed: totalMatches <= 1
+                      ? null
+                      : () {
+                          setState(() {
+                            _searchMatchIndex =
+                                (_searchMatchIndex - 1 + totalMatches) %
+                                    totalMatches;
+                          });
+                          _scrollToMatchIndex(_searchMatchIndex, totalMatches);
+                        },
+                ),
+              ),
+              // Down — next match
+              SizedBox(
+                width: 36,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: Icon(Icons.keyboard_arrow_down_rounded,
+                      color: cc.primaryText, size: 22),
+                  onPressed: totalMatches <= 1
+                      ? null
+                      : () {
+                          setState(() {
+                            _searchMatchIndex =
+                                (_searchMatchIndex + 1) % totalMatches;
+                          });
+                          _scrollToMatchIndex(_searchMatchIndex, totalMatches);
+                        },
+                ),
+              ),
+            ] else if (hasMatches && totalMatches == 0) ...[
+              // No results
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  '0/0',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: cc.secondaryText),
+                ),
+              ),
+            ] else ...[
+              // Clear button when no search active but has text
+              if (_searchCtrl.text.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.close_rounded,
+                      color: cc.secondaryText),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchMatchIndex = 0);
+                    ref.read(messageViewModelProvider(_vmArg).notifier)
+                        .clearSearch();
+                  },
+                )
+              else
+                const SizedBox(width: 8),
+            ],
+          ],
+        ),
+        bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(0.5),
+            child: Divider(height: 0, color: cc.divider)),
+      );
+    }
     final chats        = ref.watch(chatListViewModelProvider).chats;
     final activeUsers  = ref.watch(activeUsersViewModelProvider).users;
     final chat         = chats
@@ -788,11 +890,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         ),
         const SizedBox(width: 4),
       ],
-      bottom: _searchMode
-          ? _buildSearchBar()
-          : PreferredSize(
-              preferredSize: const Size.fromHeight(0.5),
-              child: Divider(height: 0, color: cc.divider)),
+      bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.5),
+          child: Divider(height: 0, color: cc.divider)),
     );
   }
 

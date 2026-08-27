@@ -167,9 +167,14 @@ class GroupModel {
       about: g['about']?.toString() ?? g['description']?.toString(),
       type: _typeFromJson(g['type'] ?? g['groupType']),
       members: members,
-      memberCount: (g['memberCount'] as num?)?.toInt() ??
-          (g['members'] as List?)?.length ??
-          members.length,
+      // Priority: explicit count fields → embedded members length
+      // SE /group/:id embeds the full members array so members.length is accurate.
+      memberCount: members.isNotEmpty
+          ? members.length
+          : ((g['memberCount'] as num?)?.toInt() ??
+              (g['totalMembers'] as num?)?.toInt() ??
+              (g['member_count'] as num?)?.toInt() ??
+              0),
       settings: GroupPermissions.fromJson(
         g['settings'] is Map<String, dynamic>
             ? g['settings'] as Map<String, dynamic>

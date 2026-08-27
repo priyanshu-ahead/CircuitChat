@@ -90,7 +90,12 @@ class _ChatMediaNotifier
         },
       );
 
-      final newItems = (raw['messages'] as List? ?? raw['data'] as List? ?? [])
+      // SE API returns messages under 'messages', 'data', or directly as list
+      final rawList = raw['messages'] as List?
+          ?? raw['data'] as List?
+          ?? [];
+
+      final newItems = rawList
           .whereType<Map<String, dynamic>>()
           .map((e) => MessageModel.fromJson(e))
           .toList();
@@ -103,14 +108,20 @@ class _ChatMediaNotifier
         ...state,
         tab: _MediaState(
           items: merged,
-          hasMore: raw['more'] == true,
+          // only hasMore if server said so AND we got a full page
+          hasMore: raw['more'] == true && newItems.length >= 30,
           isLoading: false,
         ),
       };
     } catch (_) {
+      // On error: stop loading, keep existing items, stop pagination
       state = {
         ...state,
-        tab: current.copyWith(isLoading: false, hasMore: false),
+        tab: _MediaState(
+          items: current.items,
+          hasMore: false,
+          isLoading: false,
+        ),
       };
     }
   }
