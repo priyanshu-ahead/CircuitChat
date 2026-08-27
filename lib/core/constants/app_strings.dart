@@ -108,6 +108,7 @@ class AppStrings {
   static const String online = 'Online';
   static const String lastSeen = 'Last seen';
   static const String noMessages = 'No messages yet. Say hello! 👋';
+  static const String search_messages = 'Search messages…';
 
   // ── General ───────────────────────────────────────────────────────────────
   static const String retry = 'Retry';
@@ -118,4 +119,77 @@ class AppStrings {
   static const String loading = 'Loading…';
   static const String somethingWentWrong = 'Something went wrong. Please try again.';
   static const String noInternetConnection = 'No internet connection.';
+
+  static const String copy = 'Copy';
+  static const String reply = 'Reply';
+  static const String forward = 'Forward';
+  static const String pin = 'Pin';
+  static const String unpin = 'Unpin';
+  static const String chat = 'Chat';
+  static const String chatInfo = 'Chat Info';
+  static const String groupInfo = 'Group Info';
+  static const String group = 'Group';
+  static const String members = 'members';
+  static const String archive = 'Archive';
+  static const String unarchive = 'Unarchive';
+
+  static const String mute = 'Mute';
+  static const String unmute = 'Unmute';
+
+  static const String markAsRead = 'Mark as Read';
+  static const String markAsUnread = 'Mark as Unread';
+
+  static const String block = 'Block';
+  static const String unblock = 'Unblock';
+
+  static const String exitGroup = 'Exit Group';
+  static const String deleteChat = 'Delete Chat';
+  static const String report = 'Report';
+
+  // ── Chat Status ───────────────────────────────────────────────────────────
+  static const String active = 'Active';
+  static const String typing = 'typing…';
+  static const String doNotDisturb = 'Do not disturb';
+
+  // ── Message ───────────────────────────────────────────────────────────────
+  static const String message = 'Message…';
+  static const String messageInfo = 'Message Info';
+  static const String copied = 'Copied';
+  static const String unstar = 'Unstar';
+  static const String star = 'Star';
+
+  // ── Media / Files ─────────────────────────────────────────────────────────
+  static const String file = 'file';
+  static const String viewLocation = 'View Location';
+
+  // ── Calls ─────────────────────────────────────────────────────────────────
+  static const String voiceCall = 'Voice Call';
+  static const String videoCall = 'Video Call';
+
+  // ── Recording ─────────────────────────────────────────────────────────────
+  static const String tapToRecord = 'Tap to record';
+
+  // ── Dialogs ────────────────────────────────────────────────────────────────
+  static const String reportedSuccessfully = 'Reported successfully.';
+  static const String deleteConversation = 'Delete your conversation with';
+  static const String reportToCircuitChat = 'to CircuitChat?';
+  static const String deleteMessage = 'Delete Message';
+  static const String deleteForMe = 'Delete for Me';
+  static const String deleteForEveryone = 'Delete for Everyone';
+
+  // ── Date / Time ────────────────────────────────────────────────────────────
+  static const String today = 'Today';
+  static const String yesterday = 'Yesterday';
+
+// ── Message ───────────────────────────────────────────────────────────────
+  static const String messageDeleted = 'This message was deleted';
+  static const String media = '📎 Media';
+
+
+
+// ── Message / Chat ────────────────────────────────────────────────────────
+  static const String pinnedMessage = 'Pinned Message';
+  static const String noMessagesYet = 'No messages yet.\nSay hello! 👋';
+  static const String failedToStopRecording = 'Failed to stop recording:';
+  static const String failedToLoadMessages = 'Failed to load messages.';
 }

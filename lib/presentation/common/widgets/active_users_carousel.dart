@@ -28,10 +28,9 @@ class ActiveUsersCarousel extends ConsumerWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: SizedBox(
-        height: 67,
+        height: 73,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
           itemCount: users.length,
           itemBuilder: (_, i) => _ActiveUserItem(
             user: users[i],
@@ -66,7 +65,7 @@ class _ActiveUserItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 60,
+        width: 73,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

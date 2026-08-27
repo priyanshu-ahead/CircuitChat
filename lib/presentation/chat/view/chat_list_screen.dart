@@ -173,7 +173,6 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
             child: Row(
               children: [
-                const SizedBox(width: 16),
                 _FilterChip(
                   label: 'All',
                   selected: state.filter == ChatFilter.all,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:circuit_chat/core/constants/app_strings.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -180,7 +181,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 autofocus: true,
                 style: TextStyle(color: cc.primaryText),
                 decoration: InputDecoration(
-                  hintText: 'Search messages…',
+                  hintText: AppStrings.search_messages,
                   hintStyle: TextStyle(color: cc.secondaryText),
                   filled: true,
                   fillColor: cc.searchBackground,
@@ -522,7 +523,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           _recordingSeconds = 0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to stop recording: $e')),
+          SnackBar(
+            content: Text('${AppStrings.failedToStopRecording} $e'),
+          ),
         );
       }
     }
@@ -653,7 +656,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(chat.name ?? 'Chat',
+                  Text(chat.name ?? AppStrings.chat,
                       style: TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w700,
                           color: cc.primaryText),
@@ -662,7 +665,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   Builder(builder: (_) {
                     // Typing takes priority
                     if (msgState.isTyping) {
-                      return Text('typing…',
+                      return Text(AppStrings.typing,
                           style: TextStyle(fontSize: 12,
                               color: primary,
                               fontStyle: FontStyle.italic));
@@ -680,7 +683,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         // state: 1=active, 2=away, 3=dnd, 0=offline
                         switch (u.state) {
                           case 1: // Active / online
-                            return Text('Active',
+                            return Text(AppStrings.active,
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: const Color(0xFF4CAF50),
@@ -688,18 +691,20 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                           case 2: // Away
                             return Text(
                               u.lastSeen != null
-                                  ? 'Active ${_fromNow(u.lastSeen!)}'
-                                  : 'Active',
+                                  ? '${AppStrings.active} ${_fromNow(u.lastSeen!)}'
+                                  : AppStrings.active,
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: const Color(0xFFFFC107)));
+                                fontSize: 12,
+                                color: const Color(0xFFFFC107),
+                              ),
+                            );
                           case 3: // Do not disturb
-                            return Text('Do not disturb',
+                            return Text(AppStrings.doNotDisturb,
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: const Color(0xFFE53935)));
                           default:
-                            return Text('Active',
+                            return Text(AppStrings.active,
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: const Color(0xFF4CAF50),
@@ -708,7 +713,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       } else if (u?.lastSeen != null) {
                         // Offline but we have a lastSeen/lastActive from activeUsers
                         return Text(
-                          'Active ${_fromNow(u!.lastSeen!)}',
+                          '${AppStrings.active} ${_fromNow(u!.lastSeen!)}',
                           style: TextStyle(
                               fontSize: 12, color: cc.secondaryText),
                         );
@@ -716,12 +721,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         // Fallback: use chat.lastActive from API — mirrors RN's
                         // `user?.lastActive || chat?.lastActive` check
                         return Text(
-                          'Active ${_fromNow(chat.lastActive!)}',
+                          '${AppStrings.active} ${_fromNow(chat.lastActive!)}',
                           style: TextStyle(
                               fontSize: 12, color: cc.secondaryText),
                         );
                       } else if (chat.isOnline) {
-                        return Text('Active',
+                        return Text(AppStrings.active,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: const Color(0xFF4CAF50),
@@ -806,7 +811,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             Icon(Icons.error_outline_rounded,
                 size: 48, color: cc.secondaryText),
             const SizedBox(height: 8),
-            Text(msgState.errorMessage ?? 'Failed to load messages.',
+            Text(msgState.errorMessage ?? AppStrings.failedToLoadMessages,
                 style: TextStyle(color: cc.secondaryText)),
             const SizedBox(height: 12),
             ElevatedButton(
@@ -816,7 +821,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: primary,
                   foregroundColor: Colors.white),
-              child: const Text('Retry'),
+              child: const Text(AppStrings.retry),
             ),
           ],
         ),
@@ -826,7 +831,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final messages = msgState.messages;
     if (messages.isEmpty) {
       return Center(
-        child: Text('No messages yet.\nSay hello! 👋',
+        child: Text(AppStrings.noMessagesYet,
             textAlign: TextAlign.center,
             style: TextStyle(color: cc.secondaryText, fontSize: 15)),
       );
@@ -922,7 +927,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Reply',
+                Text(AppStrings.reply,
                     style: TextStyle(fontSize: 12, color: primary,
                         fontWeight: FontWeight.w600)),
                 Text(replyTo.text ?? _contentLabel(replyTo.contentType),
@@ -1045,7 +1050,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     textCapitalization: TextCapitalization.sentences,
                     style: TextStyle(color: cc.primaryText, fontSize: 15),
                     decoration: InputDecoration(
-                      hintText: 'Message…',
+                      hintText: AppStrings.message,
                       hintStyle: TextStyle(
                           color: cc.secondaryText, fontSize: 15),
                       filled: true,
@@ -1086,7 +1091,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   color: primary.withOpacity(0.12),
                   iconColor: primary,
                   onTap: _startRecording,
-                  tooltip: 'Tap to record',
+                  tooltip: AppStrings.tapToRecord,
                 ),
             ],
           ),
@@ -1127,7 +1132,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ListTile(
                 leading: Icon(Icons.reply_rounded,
                     color: primary),
-                title: Text('Reply', style: TextStyle(color: cc.primaryText)),
+                title: Text(AppStrings.reply, style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -1138,12 +1143,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 ListTile(
                   leading: Icon(Icons.copy_rounded,
                       color: primary),
-                  title: Text('Copy', style: TextStyle(color: cc.primaryText)),
+                  title: Text(AppStrings.copy, style: TextStyle(color: cc.primaryText)),
                   onTap: () {
                     Navigator.pop(context);
                     Clipboard.setData(ClipboardData(text: msg.text!));
                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Copied')));
+                        const SnackBar(content: Text(AppStrings.copied)));
                   },
                 ),
               ListTile(
@@ -1153,7 +1158,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   color: msg.isStarred
                       ? const Color(0xFFFFC107) : primary,
                 ),
-                title: Text(msg.isStarred ? 'Unstar' : 'Star', style: TextStyle(color: cc.primaryText)),
+                title: Text(msg.isStarred ? AppStrings.unstar : AppStrings.star, style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   final vm = ref.read(
@@ -1168,7 +1173,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ListTile(
                 leading: Icon(Icons.forward_rounded,
                     color: primary),
-                title: Text('Forward', style: TextStyle(color: cc.primaryText)),
+                title: Text(AppStrings.forward, style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   ForwardMessageSheet.show(context, messageIds: [msg.id]);
@@ -1180,7 +1185,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       ? Icons.push_pin_outlined : Icons.push_pin_rounded,
                   color: primary,
                 ),
-                title: Text(msg.pinned != null ? 'Unpin' : 'Pin', style: TextStyle(color: cc.primaryText)),
+                title: Text(msg.pinned != null ? AppStrings.unpin : AppStrings.pin, style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   final vm = ref.read(
@@ -1196,7 +1201,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 ListTile(
                   leading: Icon(Icons.info_outline_rounded,
                       color: primary),
-                  title: Text('Message Info', style: TextStyle(color: cc.primaryText)),
+                  title: Text(AppStrings.messageInfo, style: TextStyle(color: cc.primaryText)),
                   onTap: () {
                     Navigator.pop(context);
                     context.push(Routes.messageInfo
@@ -1207,7 +1212,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: Color(0xFFEF4444)),
-              title: const Text('Delete',
+              title: const Text(AppStrings.delete,
                   style: TextStyle(color: Color(0xFFEF4444))),
               onTap: () {
                 Navigator.pop(context);
@@ -1233,13 +1238,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
-            Text('Delete Message',
+            Text(AppStrings.deleteMessage,
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: cc.primaryText)),
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: Color(0xFFEF4444)),
-              title: Text('Delete for Me', style: TextStyle(color: cc.primaryText)),
+              title: Text(AppStrings.deleteForMe, style: TextStyle(color: cc.primaryText)),
               onTap: () {
                 Navigator.pop(context);
                 ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -1250,7 +1255,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ListTile(
                 leading: const Icon(Icons.delete_sweep_rounded,
                     color: Color(0xFFEF4444)),
-                title: Text('Delete for Everyone', style: TextStyle(color: cc.primaryText)),
+                title: Text(AppStrings.deleteForEveryone, style: TextStyle(color: cc.primaryText)),
                 onTap: () {
                   Navigator.pop(context);
                   ref.read(messageViewModelProvider(_vmArg).notifier)
@@ -1488,11 +1493,11 @@ class _DateDivider extends StatelessWidget {
       final dt  = DateTime.parse(iso).toLocal();
       final now = DateTime.now();
       if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
-        label = 'Today';
+        label = AppStrings.today;
       } else {
         final y = now.subtract(const Duration(days: 1));
         if (dt.year == y.year && dt.month == y.month && dt.day == y.day) {
-          label = 'Yesterday';
+          label = AppStrings.yesterday;
         } else {
           label = DateFormat('MMMM d, yyyy').format(dt);
         }
@@ -1604,7 +1609,7 @@ class _MessageBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     if (msg.isDeleted)
-                      Text('This message was deleted',
+                      Text(AppStrings.messageDeleted,
                           style: TextStyle(fontSize: 14,
                               fontStyle: FontStyle.italic,
                               color: isMe
@@ -1843,7 +1848,7 @@ class _MediaContent extends StatelessWidget {
                 const Icon(Icons.location_on_rounded,
                     color: Color(0xFFE53935), size: 30),
                 const SizedBox(height: 4),
-                Text('View Location',
+                Text(AppStrings.viewLocation,
                     style: TextStyle(fontSize: 12,
                         color: isMe
                             ? Colors.white70
@@ -2163,7 +2168,7 @@ class _PinnedBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Pinned Message',
+                    Text(AppStrings.pinnedMessage,
                         style: TextStyle(fontSize: 11,
                             color: primary,
                             fontWeight: FontWeight.w600)),
@@ -2435,7 +2440,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
           // Chat Info — always shown
           _OptionTile(
             icon:  Icons.person_outline_rounded,
-            label: isGroup ? 'Group Info' : 'Chat Info',
+            label: isGroup ? AppStrings.groupInfo : AppStrings.chatInfo,
             onTap: () => onAction(_ChatOptionAction.chatInfo),
           ),
 
@@ -2443,13 +2448,13 @@ class _ChatOptionsSheet extends ConsumerWidget {
           if (chat.isArchived)
             _OptionTile(
               icon:  Icons.unarchive_outlined,
-              label: 'Unarchive',
+              label: AppStrings.unarchive,
               onTap: () => onAction(_ChatOptionAction.unarchive),
             )
           else
             _OptionTile(
               icon:  Icons.archive_outlined,
-              label: 'Archive',
+              label: AppStrings.archive,
               onTap: () => onAction(_ChatOptionAction.archive),
             ),
 
@@ -2458,12 +2463,12 @@ class _ChatOptionsSheet extends ConsumerWidget {
             chat.isPinned
                 ? _OptionTile(
                     icon:  Icons.push_pin_outlined,
-                    label: 'Unpin',
+                    label: AppStrings.unpin,
                     onTap: () => onAction(_ChatOptionAction.unpin),
                   )
                 : _OptionTile(
                     icon:  Icons.push_pin_rounded,
-                    label: 'Pin',
+                    label: AppStrings.pin,
                     onTap: () => onAction(_ChatOptionAction.pin),
                   ),
 
@@ -2472,12 +2477,12 @@ class _ChatOptionsSheet extends ConsumerWidget {
             chat.isMuted
                 ? _OptionTile(
                     icon:  Icons.volume_up_outlined,
-                    label: 'Unmute',
+                    label: AppStrings.unmute,
                     onTap: () => onAction(_ChatOptionAction.unmute),
                   )
                 : _OptionTile(
                     icon:  Icons.volume_off_outlined,
-                    label: 'Mute',
+                    label: AppStrings.mute,
                     onTap: () => onAction(_ChatOptionAction.mute),
                   ),
 
@@ -2485,13 +2490,13 @@ class _ChatOptionsSheet extends ConsumerWidget {
           if (chat.unreadCount > 0)
             _OptionTile(
               icon:  Icons.mark_email_read_outlined,
-              label: 'Mark as Read',
+              label: AppStrings.markAsRead,
               onTap: () => onAction(_ChatOptionAction.markRead),
             )
           else
             _OptionTile(
               icon:  Icons.mark_email_unread_outlined,
-              label: 'Mark as Unread',
+              label: AppStrings.markAsUnread,
               onTap: () => onAction(_ChatOptionAction.markUnread),
             ),
 
@@ -2500,12 +2505,12 @@ class _ChatOptionsSheet extends ConsumerWidget {
             chat.isBlockedByMe
                 ? _OptionTile(
                     icon:  Icons.block_flipped,
-                    label: 'Unblock',
+                    label: AppStrings.unblock,
                     onTap: () => onAction(_ChatOptionAction.unblock),
                   )
                 : _OptionTile(
                     icon:  Icons.block_rounded,
-                    label: 'Block',
+                    label: AppStrings.block,
                     onTap: () => onAction(_ChatOptionAction.block),
                   ),
 
@@ -2513,7 +2518,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
           if (isGroup)
             _OptionTile(
               icon:  Icons.exit_to_app_rounded,
-              label: 'Exit Group',
+              label: AppStrings.exitGroup,
               color: const Color(0xFFE53935),
               onTap: () => onAction(_ChatOptionAction.exitGroup),
             ),
@@ -2521,7 +2526,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
           // Delete — always shown
           _OptionTile(
             icon:  Icons.delete_outline_rounded,
-            label: 'Delete Chat',
+            label: AppStrings.deleteChat,
             color: const Color(0xFFE53935),
             onTap: () => onAction(_ChatOptionAction.delete),
           ),
@@ -2529,7 +2534,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
           // Report — always shown (static — not driven by backend)
           _OptionTile(
             icon:  Icons.flag_outlined,
-            label: 'Report',
+            label: AppStrings.report,
             color: const Color(0xFFE53935),
             onTap: () => onAction(_ChatOptionAction.report),
           ),
@@ -2547,7 +2552,7 @@ class _ChatOptionsSheet extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Cancel'),
+                child: const Text(AppStrings.cancel),
               ),
             ),
           ),
