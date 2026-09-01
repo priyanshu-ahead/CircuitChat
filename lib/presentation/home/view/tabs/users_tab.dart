@@ -28,12 +28,15 @@ class _UsersState {
   final bool            initialized;
   final String          query;
 
-  /// Contacts filtered by search query, sorted A→Z by name.
+  /// Contacts filtered by search query, sorted A→Z by name — mirrors RN's
+  /// filterChat.sort((a,b) => a.name.localeCompare(b.name))
   List<ChatModel> get filtered {
     var list = contacts;
     if (query.isNotEmpty) {
       final q = query.toLowerCase();
-      list = list.where((c) => (c.name ?? '').toLowerCase().contains(q)).toList();
+      list = list
+          .where((c) => (c.name ?? '').toLowerCase().contains(q))
+          .toList();
     }
     list = [...list]..sort((a, b) {
         if ((a.name ?? '').isEmpty) return 1;
@@ -73,14 +76,32 @@ class _UsersNotifier extends Notifier<_UsersState> {
     state = state.copyWith(isLoading: true);
     try {
       final api = ref.read(apiClientProvider);
-      final raw = await api.get<Map<String, dynamic>>(
+      // SE /chat/new-chat returns the array directly (response.data IS the array)
+      // Mirrors RN: return { success: true, chats: response.data }
+      final raw = await api.get<dynamic>(
         ApiEndpoints.chatNewChat,
         queryParameters: query.isNotEmpty ? {'search': query} : null,
       );
-      final contacts = (raw['chats'] as List? ?? [])
+
+      List<dynamic> rawList;
+      if (raw is List) {
+        // API returned the array directly — this is the expected case
+        rawList = raw;
+      } else if (raw is Map<String, dynamic>) {
+        // Fallback: wrapped response
+        rawList = (raw['chats'] as List?) ??
+            (raw['users'] as List?) ??
+            (raw['data']  as List?) ??
+            [];
+      } else {
+        rawList = [];
+      }
+
+      final contacts = rawList
           .whereType<Map<String, dynamic>>()
           .map((e) => ChatModel.fromJson(e))
           .toList();
+
       state = state.copyWith(
         contacts:    contacts,
         isLoading:   false,
@@ -129,16 +150,17 @@ class _UsersTabState extends ConsumerState<UsersTab> {
 
   @override
   Widget build(BuildContext context) {
-    final cc = context.cc;
+    final cc      = context.cc;
     final primary = Theme.of(context).colorScheme.primary;
-    final state = ref.watch(_usersProvider);
+    final state   = ref.watch(_usersProvider);
 
-    // ── Frequently contacted: last 2 unique chats from today ─────────────
+    // ── Frequently contacted: today's chats sorted by last message ────────
+    // Mirrors RN: filter chats from today, sort by createdAt, take first 2
     final allChats = ref.watch(
       chatListViewModelProvider.select((s) => s.chats),
     );
     final today = DateTime.now();
-    final frequentlyContacted = allChats
+    final frequent = allChats
         .where((c) {
           if (c.lastMessage == null) return false;
           try {
@@ -159,30 +181,27 @@ class _UsersTabState extends ConsumerState<UsersTab> {
           } catch (_) {
             return 0;
           }
-        })
-      ..take(2);
-    final frequent = frequentlyContacted.take(2).toList();
+        });
+    final frequentList = frequent.take(2).toList();
 
     return Scaffold(
       backgroundColor: cc.pageBackground,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Title + search ─────────────────────────────────────────────
+            // ── Title — top left corner ────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('People',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: cc.primaryText)),
-                  ),
-                ],
+              child: Text(
+                'Users',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: cc.primaryText),
               ),
             ),
+            // ── Search bar ─────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
@@ -196,7 +215,8 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                       color: cc.secondaryText, size: 20),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.close_rounded, size: 18, color: cc.secondaryText),
+                          icon: Icon(Icons.close_rounded,
+                              size: 18, color: cc.secondaryText),
                           onPressed: () {
                             _searchCtrl.clear();
                             ref.read(_usersProvider.notifier).search('');
@@ -214,81 +234,76 @@ class _UsersTabState extends ConsumerState<UsersTab> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // ── List body ──────────────────────────────────────────────────
             Expanded(
-              child: !state.initialized
-                  ? const SizedBox.shrink()
-                  : state.isLoading
-                      ? const ChatListShimmer()
-                      : RefreshIndicator(
-                          color: primary,
-                          onRefresh: () async =>
-                              ref.read(_usersProvider.notifier).refresh(),
-                          child: ListView(
-                            children: [
-                              // ── 1. Create New Group ─────────────────────
-                              if (state.query.isEmpty) ...[
-                                _ListTile(
-                                  leading: Container(
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: primary,
-                                      borderRadius:
-                                          BorderRadius.circular(23),
-                                    ),
-                                    child: const Icon(
-                                        Icons.group_add_rounded,
-                                        color: Colors.white,
-                                        size: 22),
-                                  ),
-                                  title: 'New Group',
-                                  subtitle: null,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const CreateGroupScreen()),
-                                  ),
+              child: state.isLoading
+                  // Show shimmer while loading (not blank)
+                  ? const ChatListShimmer()
+                  : RefreshIndicator(
+                      color: primary,
+                      onRefresh: () async =>
+                          ref.read(_usersProvider.notifier).refresh(),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          // ── Create New Group ─────────────────────────────
+                          if (state.query.isEmpty) ...[
+                            _ContactTile(
+                              leading: CircleAvatar(
+                                radius: 23,
+                                backgroundColor: primary,
+                                child: const Icon(Icons.group_add_rounded,
+                                    color: Colors.white, size: 22),
+                              ),
+                              name: 'New Group',
+                              subtitle: null,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const CreateGroupScreen()),
+                              ),
+                            ),
+                          ],
+
+                          // ── Frequently Contacted ─────────────────────────
+                          if (state.query.isEmpty &&
+                              frequentList.isNotEmpty) ...[
+                            _SectionSeparator(
+                                label: 'Frequently Contacted', cc: cc),
+                            ...frequentList.map((c) => _ChatContactRow(
+                                  chat: c,
+                                  cc: cc,
+                                  onTap: () => context.push(
+                                      Routes.chatDetail, extra: c),
+                                )),
+                          ],
+
+                          // ── Chats (alphabetically grouped) ────────────────
+                          _SectionSeparator(label: 'Chats', cc: cc),
+
+                          if (state.filtered.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Center(
+                                child: Text(
+                                  state.initialized
+                                      ? 'No contacts found'
+                                      : 'Loading…',
+                                  style: TextStyle(
+                                      color: cc.secondaryText,
+                                      fontSize: 14),
                                 ),
-                                Divider(
-                                    height: 1,
-                                    indent: 70,
-                                    color: cc.border),
-                              ],
-
-                              // ── 2. Frequently Contacted ─────────────────
-                              if (state.query.isEmpty &&
-                                  frequent.isNotEmpty) ...[
-                                const _SectionHeader('Frequently Contacted'),
-                                ...frequent.map((c) => _ChatContactTile(
-                                    chat: c,
-                                    onTap: () => context.push(
-                                          Routes.chatDetail,
-                                          extra: c,
-                                        ))),
-                              ],
-
-                              // ── 3. Chats section with letter separators ──
-                              const _SectionHeader('Chats'),
-                              if (state.filtered.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.all(32),
-                                  child: Center(
-                                    child: Text('No contacts found',
-                                        style: TextStyle(
-                                            color: cc.secondaryText,
-                                            fontSize: 14)),
-                                  ),
-                                )
-                              else
-                                ..._buildAlphabetList(
-                                    state.filtered, context),
-                            ],
-                          ),
-                        ),
+                              ),
+                            )
+                          else
+                            ..._buildAlphabetSections(
+                                state.filtered, context, cc),
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
@@ -296,25 +311,28 @@ class _UsersTabState extends ConsumerState<UsersTab> {
     );
   }
 
-  // Build contacts list with letter dividers (A, B, C…)
-  List<Widget> _buildAlphabetList(
-      List<ChatModel> contacts, BuildContext context) {
+  /// Build the alphabetically-grouped contact list.
+  /// Mirrors RN's logic:
+  ///   index==0 OR name[0] differs from previous name[0] → show letter separator
+  List<Widget> _buildAlphabetSections(
+      List<ChatModel> contacts, BuildContext context, CircuitChatColors cc) {
     final widgets = <Widget>[];
     String? lastLetter;
 
     for (int i = 0; i < contacts.length; i++) {
-      final chat  = contacts[i];
-      final name  = chat.name ?? '';
-      final letter =
-          name.isNotEmpty ? name[0].toUpperCase() : '#';
+      final chat   = contacts[i];
+      final name   = chat.name ?? '';
+      final letter = name.isNotEmpty ? name[0].toUpperCase() : '#';
 
+      // New letter group → show separator (mirrors RN searchresultsep)
       if (letter != lastLetter) {
-        widgets.add(_LetterDivider(letter: letter));
+        widgets.add(_AlphabetSeparator(letter: letter, cc: cc));
         lastLetter = letter;
       }
 
-      widgets.add(_ChatContactTile(
+      widgets.add(_ChatContactRow(
         chat: chat,
+        cc:   cc,
         onTap: () => context.push(Routes.chatDetail, extra: chat),
       ));
     }
@@ -322,135 +340,92 @@ class _UsersTabState extends ConsumerState<UsersTab> {
   }
 }
 
-// ── Shared section helpers ────────────────────────────────────────────────────
+// ── Section separator — shows a label (e.g. "Frequently Contacted") ──────────
+// Mirrors RN's searchresultcontainer/searchresulthead row.
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cc = context.cc;
-    return Container(
-        color: cc.surfaceBackground,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: cc.secondaryText,
-          ),
-        ),
-      );
-  }
-}
-
-class _LetterDivider extends StatelessWidget {
-  const _LetterDivider({required this.letter});
-  final String letter;
+class _SectionSeparator extends StatelessWidget {
+  const _SectionSeparator({required this.label, required this.cc});
+  final String          label;
+  final CircuitChatColors cc;
 
   @override
   Widget build(BuildContext context) {
-    final cc = context.cc;
     return Container(
-        color: cc.surfaceBackground,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: Text(
-          letter,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: cc.secondaryText,
-          ),
+      color: cc.surfaceBackground,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: cc.secondaryText,
         ),
-      );
+      ),
+    );
   }
 }
 
-class _ListTile extends StatelessWidget {
-  const _ListTile({
-    required this.leading,
-    required this.title,
-    this.subtitle,
+// ── Alphabet letter separator — shows a single letter (A, B, C…) ─────────────
+// Mirrors RN's searchresultsep with the letter text inside.
+
+class _AlphabetSeparator extends StatelessWidget {
+  const _AlphabetSeparator({required this.letter, required this.cc});
+  final String          letter;
+  final CircuitChatColors cc;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: cc.surfaceBackground,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+      child: Text(
+        letter,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: cc.secondaryText,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Single contact row — avatar + name + about ────────────────────────────────
+// Mirrors RN's chatListItem with avatar, name, and about text.
+
+class _ChatContactRow extends StatelessWidget {
+  const _ChatContactRow({
+    required this.chat,
+    required this.cc,
     required this.onTap,
   });
-  final Widget  leading;
-  final String  title;
-  final String? subtitle;
-  final VoidCallback onTap;
+  final ChatModel       chat;
+  final CircuitChatColors cc;
+  final VoidCallback    onTap;
 
   @override
   Widget build(BuildContext context) {
-    final cc = context.cc;
-    return InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: cc.primaryText)),
-                    if (subtitle != null)
-                      Text(subtitle!,
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: cc.secondaryText),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded,
-                  color: cc.secondaryText, size: 18),
-            ],
-          ),
-        ),
-      );
-  }
-}
-
-class _ChatContactTile extends StatelessWidget {
-  const _ChatContactTile({required this.chat, required this.onTap});
-  final ChatModel    chat;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cc = context.cc;
     return Column(
       children: [
         InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
-                // Avatar with online dot
+                // ── Avatar with online indicator ───────────────────────────
                 Stack(
                   children: [
                     CircleAvatar(
                       radius: 23,
                       backgroundColor: cc.surfaceBackground,
-                      backgroundImage: chat.avatar != null &&
-                              chat.avatar!.isNotEmpty
-                          ? CachedNetworkImageProvider(chat.avatar!)
-                          : null,
-                      child: (chat.avatar == null ||
-                              chat.avatar!.isEmpty)
+                      backgroundImage:
+                          chat.avatar != null && chat.avatar!.isNotEmpty
+                              ? CachedNetworkImageProvider(chat.avatar!)
+                              : null,
+                      child: (chat.avatar == null || chat.avatar!.isEmpty)
                           ? Icon(
                               chat.type == ChatType.group
                                   ? Icons.group_rounded
@@ -461,11 +436,9 @@ class _ChatContactTile extends StatelessWidget {
                     ),
                     if (chat.isOnline)
                       Positioned(
-                        right: 0,
-                        bottom: 0,
+                        right: 0, bottom: 0,
                         child: Container(
-                          width: 11,
-                          height: 11,
+                          width: 11, height: 11,
                           decoration: BoxDecoration(
                             color: const Color(0xFF43A047),
                             shape: BoxShape.circle,
@@ -477,6 +450,7 @@ class _ChatContactTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(width: 12),
+                // ── Name + about ───────────────────────────────────────────
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,8 +470,7 @@ class _ChatContactTile extends StatelessWidget {
                         Text(
                           chat.members.first.bio!,
                           style: TextStyle(
-                              fontSize: 12,
-                              color: cc.secondaryText),
+                              fontSize: 12, color: cc.secondaryText),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -508,8 +481,63 @@ class _ChatContactTile extends StatelessWidget {
             ),
           ),
         ),
-        Divider(
-            height: 1, indent: 70, color: cc.border),
+        Divider(height: 1, indent: 70, color: cc.border),
+      ],
+    );
+  }
+}
+
+// ── Generic contact tile (for "New Group" row) ────────────────────────────────
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({
+    required this.leading,
+    required this.name,
+    this.subtitle,
+    required this.onTap,
+  });
+  final Widget       leading;
+  final String       name;
+  final String?      subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                leading,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: cc.primaryText)),
+                      if (subtitle != null)
+                        Text(subtitle!,
+                            style: TextStyle(
+                                fontSize: 12, color: cc.secondaryText),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Divider(height: 1, indent: 70, color: cc.border),
       ],
     );
   }

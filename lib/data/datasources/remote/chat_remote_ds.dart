@@ -60,15 +60,26 @@ class ChatRemoteDataSource implements ChatRepository {
 
   @override
   Future<List<ChatModel>> getNewChatUsers(String query) async {
-    final raw = await _api.get<Map<String, dynamic>>(
+    final raw = await _api.get<dynamic>(
       ApiEndpoints.chatNewChat,
-      queryParameters: {'search': query},
+      queryParameters: query.isNotEmpty ? {'search': query} : null,
     );
-    final chats = (raw['chats'] as List? ?? [])
+    // SE /chat/new-chat returns the array directly (mirrors RN: response.data IS array)
+    List<dynamic> rawList;
+    if (raw is List) {
+      rawList = raw;
+    } else if (raw is Map<String, dynamic>) {
+      rawList = (raw['chats'] as List?) ??
+          (raw['users'] as List?) ??
+          (raw['data']  as List?) ??
+          [];
+    } else {
+      rawList = [];
+    }
+    return rawList
         .whereType<Map<String, dynamic>>()
         .map((e) => ChatModel.fromJson(e))
         .toList();
-    return chats;
   }
 
   @override
