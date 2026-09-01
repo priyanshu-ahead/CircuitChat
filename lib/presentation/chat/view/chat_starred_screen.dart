@@ -14,7 +14,7 @@ import '../../../data/models/message_model.dart';
 class _StarredState {
   const _StarredState({
     this.messages = const [],
-    this.isLoading = true,
+    this.isLoading = false,  // start false — _load sets it true
     this.editMode = false,
     this.selected = const [],
   });
@@ -43,8 +43,9 @@ class _StarredNotifier
   @override
   _StarredState build(ChatModel arg) {
     _chat = arg;
-    _load();
-    return const _StarredState();
+    // Use addPostFrameCallback so provider is registered before async work
+    Future.microtask(_load);
+    return const _StarredState(isLoading: true);
   }
 
   late final ChatModel _chat;
@@ -57,23 +58,30 @@ class _StarredNotifier
     try {
       List<MessageModel> msgs;
       if (_chat.id == 'all') {
-        // Aggregate starred messages across all chats via /message/starred
         final raw = await ref
             .read(apiClientProvider)
-            .get<Map<String, dynamic>>(
-          '/message/starred',
-        );
-        msgs = (raw['messages'] as List? ?? raw['data'] as List? ?? [])
+            .get<dynamic>('/message/starred');
+        final rawList = raw is List
+            ? raw
+            : (raw is Map
+                ? ((raw['messages'] as List?) ?? (raw['data'] as List?) ?? [])
+                : []);
+        msgs = rawList
             .whereType<Map<String, dynamic>>()
             .map((e) => MessageModel.fromJson(e))
             .toList();
       } else {
         final raw = await ref
             .read(apiClientProvider)
-            .get<Map<String, dynamic>>(
+            .get<dynamic>(
           ApiEndpoints.messageStarredList(_chat.id, _chatType),
         );
-        msgs = (raw['messages'] as List? ?? raw['data'] as List? ?? [])
+        final rawList = raw is List
+            ? raw
+            : (raw is Map
+                ? ((raw['messages'] as List?) ?? (raw['data'] as List?) ?? [])
+                : []);
+        msgs = rawList
             .whereType<Map<String, dynamic>>()
             .map((e) => MessageModel.fromJson(e))
             .toList();

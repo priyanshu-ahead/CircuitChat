@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/user_model.dart';
 
 // ── State & ViewModel ─────────────────────────────────────────────────────────
@@ -11,7 +12,7 @@ import '../../../data/models/user_model.dart';
 class _BlockedState {
   const _BlockedState({
     this.users = const [],
-    this.isLoading = true,
+    this.isLoading = false,  // start false
     this.actionUserId,
   });
   final List<UserModel> users;
@@ -35,19 +36,29 @@ class _BlockedState {
 class _BlockedNotifier extends Notifier<_BlockedState> {
   @override
   _BlockedState build() {
-    _load();
-    return const _BlockedState();
+    Future.microtask(_load);
+    return const _BlockedState(isLoading: true);
   }
 
   Future<void> _load() async {
+    state = state.copyWith(isLoading: true);
     try {
+      // SE /friend/block returns the list directly OR wrapped
       final raw = await ref
           .read(apiClientProvider)
           .get<dynamic>(ApiEndpoints.friendBlockedList);
-      final list = raw is List
-          ? raw
-          : (raw is Map ? raw['users'] as List? ?? [] : []);
-      final users = list
+      List<dynamic> rawList;
+      if (raw is List) {
+        rawList = raw;
+      } else if (raw is Map) {
+        rawList = (raw['users'] as List?) ??
+            (raw['data']  as List?) ??
+            (raw['chats'] as List?) ??
+            [];
+      } else {
+        rawList = [];
+      }
+      final users = rawList
           .whereType<Map<String, dynamic>>()
           .map((e) => UserModel.fromJson(e))
           .toList();
@@ -85,33 +96,33 @@ class BlockedUsersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(_blockedProvider);
+    final cc      = context.cc;
+    final primary = Theme.of(context).colorScheme.primary;
+    final state   = ref.watch(_blockedProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: cc.surfaceBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0.5,
-        title: const Text(
-          'Blocked Users',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
-        ),
+        title: Text('Blocked Users',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 17,
+                color: cc.primaryText)),
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: primary))
           : state.users.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.block_rounded,
-                          size: 56, color: Color(0xFFCCCCCC)),
-                      SizedBox(height: 12),
+                          size: 56, color: cc.secondaryText),
+                      const SizedBox(height: 12),
                       Text(
                         'No blocked users',
                         style: TextStyle(
-                            color: Color(0xFFAAAAAA), fontSize: 15),
+                            color: cc.secondaryText, fontSize: 15),
                       ),
                     ],
                   ),
@@ -119,7 +130,7 @@ class BlockedUsersScreen extends ConsumerWidget {
               : Container(
                   margin: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cc.cardBackground,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -130,42 +141,40 @@ class BlockedUsersScreen extends ConsumerWidget {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: state.users.length,
-                    separatorBuilder: (_, __) => const Divider(
-                        height: 1, indent: 66, color: Color(0xFFEEEEEE)),
+                    separatorBuilder: (_, __) => Divider(
+                        height: 1, indent: 66, color: cc.divider),
                     itemBuilder: (_, i) {
-                      final user = state.users[i];
-                      final isActing =
-                          state.actionUserId == user.id;
+                      final user     = state.users[i];
+                      final isActing = state.actionUserId == user.id;
                       return ListTile(
-                        leading: _buildAvatar(user),
+                        leading: _buildAvatar(user, cc),
                         title: Text(
                           user.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: cc.primaryText),
                         ),
                         subtitle: user.bio != null
                             ? Text(
                                 user.bio!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF888888)),
+                                    color: cc.secondaryText),
                               )
                             : null,
                         trailing: isActing
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
+                            ? SizedBox(
+                                width: 24, height: 24,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2))
+                                    strokeWidth: 2, color: primary))
                             : TextButton(
                                 onPressed: () =>
                                     _confirmUnblock(context, ref, user),
-                                child: const Text(
+                                child: Text(
                                   'Unblock',
-                                  style: TextStyle(
-                                      color: Color(0xFF1976D2)),
+                                  style: TextStyle(color: primary),
                                 ),
                               ),
                       );
@@ -175,7 +184,7 @@ class BlockedUsersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatar(UserModel user) {
+  Widget _buildAvatar(UserModel user, CircuitChatColors cc) {
     if (user.avatar != null && user.avatar!.isNotEmpty) {
       return CircleAvatar(
         radius: 22,
@@ -184,11 +193,11 @@ class BlockedUsersScreen extends ConsumerWidget {
     }
     return CircleAvatar(
       radius: 22,
-      backgroundColor: const Color(0xFF888888),
+      backgroundColor: cc.surfaceBackground,
       child: Text(
         user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-        style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.w600),
+        style: TextStyle(
+            color: cc.secondaryText, fontWeight: FontWeight.w600),
       ),
     );
   }
