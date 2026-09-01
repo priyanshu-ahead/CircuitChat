@@ -1,6 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'dart:async';
+import 'dart:developer' as dev;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -87,20 +86,22 @@ class GroupViewModel extends FamilyNotifier<GroupState, String> {
     final result = await _repo.getGroupInfo(_groupId);
     if (result.success && result.data != null) {
       final group = result.data!;
-      // Seed state.members immediately from the embedded members that
-      // getGroupInfo returns — mirrors RN which reads group.members directly.
-      // This ensures memberCount shows instantly without waiting for loadMembers.
-      final embeddedMembers = group.members;
+      dev.log(
+        'GroupVM: getGroupInfo success — '
+        'memberCount=${group.memberCount} '
+        'embeddedMembers=${group.members.length}',
+        name: 'GroupVM',
+      );
       state = state.copyWith(
         group:   group,
         status:  GroupStatus.success,
-        members: embeddedMembers.isNotEmpty ? embeddedMembers : state.members,
+        members: group.members.isNotEmpty ? group.members : state.members,
         clearError: true,
       );
-      // Also load from the dedicated members endpoint to get the full paginated
-      // list (which uses the 'users' key in its response).
-      unawaited(loadMembers(refresh: embeddedMembers.isEmpty));
+      // Always load paginated members — /group/:id often returns empty members[]
+      unawaited(loadMembers(refresh: true));
     } else {
+      dev.log('GroupVM: getGroupInfo failed — ${result.message}', name: 'GroupVM');
       state = state.copyWith(
         status: GroupStatus.error,
         errorMessage: result.message ?? 'Failed to load group.',
@@ -160,6 +161,14 @@ class GroupViewModel extends FamilyNotifier<GroupState, String> {
       groupId: _groupId,
       page: state.membersPage,
     ));
+
+    dev.log(
+      'GroupVM: fetchMembers — success=${result.success} '
+      'count=${result.data?.length ?? 0} '
+      'error=${result.message}',
+      name: 'GroupVM',
+    );
+
     if (result.success && result.data != null) {
       final incoming = result.data!;
       state = state.copyWith(

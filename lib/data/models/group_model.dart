@@ -34,11 +34,16 @@ class GroupMember {
             username: '',
             email: '',
           );
+    // SE status: 'active' | 1 | '1' all mean active
+    final rawStatus = json['status'];
+    final status = rawStatus == 1 || rawStatus == '1' || rawStatus == 'active'
+        ? 'active'
+        : (rawStatus?.toString() ?? 'active');
     return GroupMember(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       user: user,
       role: (json['role'] ?? 'member').toString(),
-      status: (json['status'] ?? 'active').toString(),
+      status: status,
       joinedAt: json['createdAt']?.toString() ?? json['joinedAt']?.toString(),
     );
   }
@@ -169,12 +174,11 @@ class GroupModel {
       members: members,
       // Priority: explicit count fields → embedded members length
       // SE /group/:id embeds the full members array so members.length is accurate.
-      memberCount: members.isNotEmpty
-          ? members.length
-          : ((g['memberCount'] as num?)?.toInt() ??
-              (g['totalMembers'] as num?)?.toInt() ??
-              (g['member_count'] as num?)?.toInt() ??
-              0),
+      // Priority: totalMembers (exact SE field name) → memberCount → members.length
+      memberCount: (g['totalMembers'] as num?)?.toInt() ??
+          (g['memberCount'] as num?)?.toInt() ??
+          (g['member_count'] as num?)?.toInt() ??
+          members.length,
       settings: GroupPermissions.fromJson(
         g['settings'] is Map<String, dynamic>
             ? g['settings'] as Map<String, dynamic>

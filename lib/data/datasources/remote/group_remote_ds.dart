@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
@@ -28,11 +30,29 @@ class GroupRemoteDataSource implements GroupRepository {
   @override
   Future<ApiResult<GroupModel>> getGroupInfo(String groupId) async {
     try {
-      final raw = await _api.get<Map<String, dynamic>>(
+      final raw = await _api.get<dynamic>(
         ApiEndpoints.groupById(groupId),
       );
-      return _success(GroupModel.fromJson(raw));
+      dev.log(
+        'getGroupInfo raw type=${raw.runtimeType} '
+        'keys=${raw is Map ? (raw as Map).keys.toList() : "not a map"}',
+        name: 'GroupDS',
+      );
+      final Map<String, dynamic> data;
+      if (raw is Map<String, dynamic>) {
+        data = raw;
+      } else {
+        return _failure('Unexpected response type: ${raw.runtimeType}');
+      }
+      final group = GroupModel.fromJson(data);
+      dev.log(
+        'getGroupInfo parsed: id=${group.id} name=${group.name} '
+        'memberCount=${group.memberCount} embeddedMembers=${group.members.length}',
+        name: 'GroupDS',
+      );
+      return _success(group);
     } catch (e) {
+      dev.log('getGroupInfo error: $e', name: 'GroupDS');
       return _failure(e);
     }
   }
@@ -98,25 +118,44 @@ class GroupRemoteDataSource implements GroupRepository {
   Future<ApiResult<List<GroupMember>>> fetchMembers(
       FetchGroupMembersParams params) async {
     try {
-      final raw = await _api.get<Map<String, dynamic>>(
+      final raw = await _api.get<dynamic>(
         ApiEndpoints.groupMembers(params.groupId),
         queryParameters: {
-          'page': params.page,
+          'page':  params.page,
           'limit': params.limit,
         },
       );
-      // SE /group/members/:id returns members under 'users', 'members', or 'data'
-      // (confirmed from RN call.js: response.data.users)
-      final list = (raw['users'] as List?
-              ?? raw['members'] as List?
-              ?? raw['data'] as List?
-              ?? [])
+
+      dev.log(
+        'fetchMembers raw type=${raw.runtimeType} '
+        'keys=${raw is Map ? (raw as Map).keys.toList() : "array"}',
+        name: 'GroupDS',
+      );
+
+      List<dynamic> rawList;
+      if (raw is List) {
+        rawList = raw;
+      } else if (raw is Map<String, dynamic>) {
+        rawList = (raw['users']   as List?) ??
+                  (raw['members'] as List?) ??
+                  (raw['data']    as List?) ??
+                  (raw['result']  as List?) ??
+                  [];
+      } else {
+        rawList = [];
+      }
+
+      dev.log('fetchMembers rawList.length=${rawList.length}', name: 'GroupDS');
+
+      final list = rawList
           .whereType<Map<String, dynamic>>()
           .map((e) => GroupMember.fromJson(e))
           .toList();
-      return _success(list);
 
+      dev.log('fetchMembers parsed=${list.length} members', name: 'GroupDS');
+      return _success(list);
     } catch (e) {
+      dev.log('fetchMembers error: $e', name: 'GroupDS');
       return _failure(e);
     }
   }

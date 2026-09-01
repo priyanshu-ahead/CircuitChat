@@ -29,6 +29,7 @@ import '../../../presentation/chat/viewmodel/active_users_viewmodel.dart';
 import '../../../presentation/chat/viewmodel/chat_list_viewmodel.dart';
 import '../../../presentation/common/widgets/forward_message_sheet.dart';
 import '../../../presentation/common/widgets/shimmer_list.dart';
+import '../../group/viewmodel/group_viewmodel.dart';
 import 'media_viewer_screen.dart';
 import '../viewmodel/message_viewmodel.dart';
 
@@ -531,20 +532,52 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   .read(messageViewModelProvider(_vmArg).notifier)
                   .unpinMessage(msgState.pinnedMessage!.id),
             ),
-          Expanded(child: _buildMessageList(msgState)),
+          // Stack the message list with the scroll-down button so the
+          // FAB sits ABOVE the message list (not the input bar).
+          Expanded(
+            child: Stack(
+              children: [
+                _buildMessageList(msgState),
+                // Scroll-to-bottom button — positioned inside the list area
+                if (_showScrollToBottom)
+                  Positioned(
+                    right: 12,
+                    bottom: 8,
+                    child: GestureDetector(
+                      onTap: _scrollToBottom,
+                      child: Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: cc.cardBackground,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                          border: Border.all(
+                              color: cc.border, width: 0.5),
+                        ),
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: primary,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           if (msgState.isTyping) _buildTypingIndicator(),
           if (msgState.replyTo != null)
             _buildReplyPreview(msgState.replyTo!),
           _buildInputBar(),
         ],
       ),
-      floatingActionButton: _showScrollToBottom
-          ? FloatingActionButton.small(
-              onPressed: _scrollToBottom,
-              backgroundColor: cc.cardBackground,
-              child: Icon(Icons.keyboard_arrow_down_rounded,
-                  color: primary))
-          : null,
+      // No floatingActionButton — scroll button is inside the Stack above
     );
   }
 
@@ -700,10 +733,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         .where((c) => c.id == widget.chat.id)
         .firstOrNull ?? widget.chat;
 
+    // Watch group state at top level (outside Builder) so rebuilds work correctly
+    final groupState = chat.type == ChatType.group
+        ? ref.watch(groupViewModelProvider(chat.id))
+        : null;
+
     final bool isDirect   = chat.type == ChatType.direct;
-    // In SocialEngine, for a direct chat the chat._id IS the other user's _id.
-    // The members array is often empty from the list API response, so we
-    // prefer chat.id as the lookup key (mirrors RN: state.users[id]).
     final String? otherId  = isDirect ? chat.id : null;
     final UserModel? otherUser = isDirect
         ? (activeUsers[otherId] ?? chat.members.firstOrNull)
@@ -837,21 +872,44 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         return const SizedBox.shrink();
                       }
                     } else {
-                      // Group: show online member names (mirrors RN logic)
-                      final onlineNames = chat.members
-                          .where((m) => activeUsers.containsKey(m.id))
-                          .map((m) => m.name.split(' ').first)
-                          .take(5)
-                          .join(', ');
-                      return Text(
-                        onlineNames.isNotEmpty
-                            ? onlineNames
-                            : '${chat.members.length} members',
-                        style: TextStyle(
-                            fontSize: 12, color: cc.secondaryText),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      );
+                      // Group: show member first-names, comma-separated
+                      // Mirrors RN header.js:
+                      // group?.members?.filter(active).map(m=>m.user.name.split(' ')[0]).join(', ')
+                      // groupState is watched at top level of _buildAppBar
+
+                      final members = groupState?.members
+                              .where((m) => m.user.id.isNotEmpty &&
+                                  m.user.name.isNotEmpty)
+                              .toList() ??
+                          [];
+
+                      // Always show something — names if loaded, count otherwise
+                      if (members.isNotEmpty) {
+                        final names = members
+                            .map((m) => m.user.name.split(' ').first)
+                            .where((n) => n.isNotEmpty)
+                            .take(6)
+                            .join(', ');
+                        return Text(
+                          names,
+                          style: TextStyle(
+                              fontSize: 12, color: cc.secondaryText),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      }
+
+                      // Members not loaded yet — show count from group info
+                      final count = groupState?.group?.memberCount ?? 0;
+                      if (count > 0) {
+                        return Text(
+                          '$count members',
+                          style: TextStyle(
+                              fontSize: 12, color: cc.secondaryText),
+                        );
+                      }
+
+                      return const SizedBox.shrink();
                     }
                   }),
                 ],
@@ -1716,10 +1774,12 @@ class _MessageBubble extends StatelessWidget {
                                   ? cc.bubbleMeText.withOpacity(0.7)
                                   : cc.secondaryText))
                     else if (msg.contentType == ContentType.text)
-                      Text(msg.text ?? '',
-                          style: TextStyle(fontSize: 15,
-                              color: textColor,
-                              height: 1.4))
+                      _MessageText(
+                        text: msg.text ?? '',
+                        mentions: msg.mentions,
+                        textColor: textColor,
+                        isMe: isMe,
+                      )
                     else
                       _MediaContent(
                         msg: msg,
@@ -2382,6 +2442,88 @@ class _ReactionsRow extends StatelessWidget {
         )).toList(),
       ),
     );
+  }
+}
+
+// ── Message text with @mention highlighting ───────────────────────────────────
+/// Mirrors RN content.js mention resolution:
+///   message.text.replace(`@${mention._id}`, `@${mention.name}`)
+/// In Flutter we build a RichText with highlighted mention spans.
+class _MessageText extends StatelessWidget {
+  const _MessageText({
+    required this.text,
+    required this.mentions,
+    required this.textColor,
+    required this.isMe,
+  });
+
+  final String                text;
+  final List<MessageMention>  mentions;
+  final Color                 textColor;
+  final bool                  isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    if (mentions.isEmpty) {
+      return Text(text,
+          style: TextStyle(fontSize: 15, color: textColor, height: 1.4));
+    }
+
+    // Resolve @userId → @name for each mention
+    // Build a map: userId → displayName
+    final mentionMap = {
+      for (final m in mentions) m.id: m.name,
+    };
+
+    // Split text on @userId patterns and build TextSpans
+    final spans = <TextSpan>[];
+    var remaining = text;
+
+    // Sort mentions by their position in the text to process in order
+    final mentionPattern = RegExp(r'@([a-zA-Z0-9_]+)');
+    final matches = mentionPattern.allMatches(text).toList();
+
+    if (matches.isEmpty) {
+      return Text(text,
+          style: TextStyle(fontSize: 15, color: textColor, height: 1.4));
+    }
+
+    int lastEnd = 0;
+    for (final match in matches) {
+      // Add text before this mention
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: TextStyle(fontSize: 15, color: textColor, height: 1.4),
+        ));
+      }
+
+      final userId = match.group(1) ?? '';
+      final displayName = mentionMap[userId] ?? userId;
+
+      // Highlight the mention
+      spans.add(TextSpan(
+        text: '@$displayName',
+        style: TextStyle(
+          fontSize: 15,
+          height: 1.4,
+          color: isMe ? Colors.white : const Color(0xFF1877F2),
+          fontWeight: FontWeight.w600,
+        ),
+      ));
+
+      lastEnd = match.end;
+    }
+
+    // Add remaining text after last mention
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: TextStyle(fontSize: 15, color: textColor, height: 1.4),
+      ));
+    }
+
+    return RichText(text: TextSpan(children: spans));
   }
 }
 

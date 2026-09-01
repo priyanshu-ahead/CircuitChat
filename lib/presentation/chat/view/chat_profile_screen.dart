@@ -137,6 +137,7 @@ class _DirectProfile extends ConsumerWidget {
                       : Icons.block_rounded,
                   label: chat.isBlockedByMe ? 'Unblock User' : 'Block User',
                   color: const Color(0xFFE53935),
+                  showArrow: false,
                   onTap: () => _confirmBlock(context, ref),
                 ),
                 _Divider(),
@@ -144,6 +145,7 @@ class _DirectProfile extends ConsumerWidget {
                   icon: Icons.flag_outlined,
                   label: 'Report',
                   color: const Color(0xFFE53935),
+                  showArrow: false,
                   onTap: () {},
                 ),
                 const SizedBox(height: 32),
@@ -196,13 +198,16 @@ class _GroupProfile extends ConsumerWidget {
     final groupState = ref.watch(groupViewModelProvider(chat.id));
     final group = groupState.group;
 
-    // ── Member count: from API memberCount field, or loaded members page ─
-    // groupState.members is populated by the auto-load in GroupViewModel._load()
+    // ── Member count: use embedded members from getGroupInfo (mirrors RN) ─
+    // RN uses group.members.filter(active) directly — same approach here.
+    final activeMembers = groupState.members
+        .where((m) =>
+            m.status == 'active' &&
+            m.user.id.isNotEmpty)
+        .toList();
     final memberCount = group?.memberCount != null && group!.memberCount > 0
         ? group.memberCount
-        : groupState.members.isNotEmpty
-            ? groupState.members.length
-            : null;
+        : activeMembers.length;
 
     return Scaffold(
       backgroundColor: cc.surfaceBackground,
@@ -261,9 +266,7 @@ class _GroupProfile extends ConsumerWidget {
                       _InfoRow(
                         icon: Icons.people_outline_rounded,
                         label: 'Members',
-                        value: memberCount != null
-                            ? '$memberCount members'
-                            : 'Loading…',
+                        value: '$memberCount members',
                         onTap: () => context.push(
                           Routes.groupMembers
                               .replaceFirst(':groupId', chat.id),
@@ -273,7 +276,39 @@ class _GroupProfile extends ConsumerWidget {
                       const SizedBox(height: 8),
                       _Divider(),
 
-                      // ── Actions as list ───────────────────────────────
+                      // ── Members preview (first 2, mirrors RN details.js) ──
+                      if (activeMembers.isNotEmpty) ...[
+                        _SectionLabel('${activeMembers.length} Members'),
+                        Container(
+                          color: cc.cardBackground,
+                          child: Column(
+                            children: [
+                              // First 2 active members
+                              ...activeMembers.take(2).map((m) =>
+                                _MemberTile(member: m, cc: cc)),
+                              // "See all" if more than 2
+                              if (activeMembers.length > 2 ||
+                                  (group?.memberCount ?? 0) > 2)
+                                ListTile(
+                                  onTap: () => context.push(
+                                    Routes.groupMembers
+                                        .replaceFirst(':groupId', chat.id),
+                                  ),
+                                  title: Text(
+                                    'See all ${group?.memberCount ?? activeMembers.length} members',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme.primary,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        _Divider(),
+                      ],
                       _ListAction(
                         icon: Icons.people_outline_rounded,
                         label: 'View Members',
@@ -353,6 +388,7 @@ class _GroupProfile extends ConsumerWidget {
                         icon: Icons.exit_to_app_rounded,
                         label: 'Leave Group',
                         color: const Color(0xFFE53935),
+                        showArrow: false,
                         onTap: () => _confirmLeave(context, ref),
                       ),
                       const SizedBox(height: 32),
@@ -492,11 +528,13 @@ class _ListAction extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.color,
+    this.showArrow = true,
   });
   final IconData     icon;
   final String       label;
   final VoidCallback onTap;
   final Color?       color;
+  final bool         showArrow;
 
   @override
   Widget build(BuildContext context) {
@@ -520,11 +558,101 @@ class _ListAction extends StatelessWidget {
                 fontSize: 15,
                 color: color ?? cc.primaryText,
                 fontWeight: FontWeight.w500)),
-        trailing: Icon(Icons.chevron_right_rounded,
-            color: cc.secondaryText, size: 18),
+        trailing: showArrow
+            ? Icon(Icons.chevron_right_rounded,
+                color: cc.secondaryText, size: 18)
+            : null,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       ),
+    );
+  }
+}
+
+// ── Section label ──────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cc = context.cc;
+    return Container(
+      color: cc.surfaceBackground,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: cc.secondaryText)),
+    );
+  }
+}
+
+// ── Member tile (mirrors RN Member component) ─────────────────────────────────
+
+class _MemberTile extends StatelessWidget {
+  const _MemberTile({required this.member, required this.cc});
+  final GroupMember       member;
+  final CircuitChatColors cc;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = member.user;
+    return Column(
+      children: [
+        ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: CircleAvatar(
+            radius: 22,
+            backgroundColor: cc.surfaceBackground,
+            backgroundImage: user.avatar != null && user.avatar!.isNotEmpty
+                ? CachedNetworkImageProvider(user.avatar!)
+                : null,
+            child: (user.avatar == null || user.avatar!.isEmpty)
+                ? Text(
+                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600))
+                : null,
+          ),
+          title: Text(user.name,
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: cc.primaryText),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          subtitle: user.bio != null && user.bio!.isNotEmpty
+              ? Text(user.bio!,
+                  style:
+                      TextStyle(fontSize: 12, color: cc.secondaryText),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis)
+              : null,
+          trailing: member.isAdmin
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme.primary
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('Admin',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500)),
+                )
+              : null,
+        ),
+        Divider(height: 1, indent: 66, color: cc.divider),
+      ],
     );
   }
 }
