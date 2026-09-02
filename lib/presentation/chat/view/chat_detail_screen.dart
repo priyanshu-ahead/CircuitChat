@@ -33,6 +33,81 @@ import '../../group/viewmodel/group_viewmodel.dart';
 import 'media_viewer_screen.dart';
 import '../viewmodel/message_viewmodel.dart';
 
+// ── Group members subtitle provider ──────────────────────────────────────────
+final _groupMembersSubtitleProvider =
+    FutureProvider.family<String, String>((ref, groupId) async {
+  try {
+    final api = ref.read(apiClientProvider);
+    final raw = await api.get<dynamic>(
+        '/group/members/$groupId',
+        queryParameters: {'page': 1, 'limit': 50});
+
+    // ── Debug: log the raw response so we can see the exact shape ─────────
+    debugPrint('[GroupSubtitle] raw type=${raw.runtimeType}');
+    if (raw is Map) {
+      debugPrint('[GroupSubtitle] map keys=${(raw as Map).keys.toList()}');
+      for (final k in (raw as Map).keys) {
+        final v = (raw as Map)[k];
+        if (v is List && v.isNotEmpty) {
+          debugPrint('[GroupSubtitle] key=$k first item=${v.first}');
+        }
+      }
+    } else if (raw is List && (raw as List).isNotEmpty) {
+      debugPrint('[GroupSubtitle] direct list, first=${(raw as List).first}');
+    }
+
+    // ── Extract the list regardless of wrapper ─────────────────────────────
+    List<dynamic> rawList;
+    if (raw is List) {
+      rawList = raw as List;
+    } else if (raw is Map<String, dynamic>) {
+      rawList = (raw['users']   as List?) ??
+                (raw['members'] as List?) ??
+                (raw['data']    as List?) ??
+                (raw['result']  as List?) ??
+                [];
+    } else {
+      rawList = [];
+    }
+
+    debugPrint('[GroupSubtitle] rawList.length=${rawList.length}');
+
+    if (rawList.isEmpty) return '';
+
+    // ── Extract first name from every possible field shape ─────────────────
+    final names = rawList
+        .whereType<Map<String, dynamic>>()
+        .map((m) {
+          // Shape 1: { user: { name/display_name/username } }
+          final userField = m['user'];
+          if (userField is Map<String, dynamic>) {
+            final n = (userField['name']         ??
+                       userField['display_name']  ??
+                       userField['displayName']   ??
+                       userField['username']       ??
+                       '').toString().trim();
+            if (n.isNotEmpty) return n.split(' ').first;
+          }
+          // Shape 2: flat { name / display_name / username }
+          final flat = (m['name']         ??
+                        m['display_name']  ??
+                        m['displayName']   ??
+                        m['username']       ??
+                        '').toString().trim();
+          return flat.split(' ').first;
+        })
+        .where((n) => n.isNotEmpty)
+        .take(6)
+        .join(', ');
+
+    debugPrint('[GroupSubtitle] result="$names"');
+    return names;
+  } catch (e) {
+    debugPrint('[GroupSubtitle] error: $e');
+    return '';
+  }
+});
+
 class ChatDetailScreen extends ConsumerStatefulWidget {
   const ChatDetailScreen({super.key, required this.chat});
   final ChatModel chat;
@@ -738,6 +813,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         ? ref.watch(groupViewModelProvider(chat.id))
         : null;
 
+    // Direct subtitle fetch for groups — independent of GroupViewModel
+    final groupSubtitleAsync = chat.type == ChatType.group
+        ? ref.watch(_groupMembersSubtitleProvider(chat.id))
+        : null;
+
     final bool isDirect   = chat.type == ChatType.direct;
     final String? otherId  = isDirect ? chat.id : null;
     final UserModel? otherUser = isDirect
@@ -792,6 +872,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(chat.name ?? AppStrings.chat,
                       style: TextStyle(
@@ -872,44 +954,47 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         return const SizedBox.shrink();
                       }
                     } else {
-                      // Group: show member first-names, comma-separated
-                      // Mirrors RN header.js:
-                      // group?.members?.filter(active).map(m=>m.user.name.split(' ')[0]).join(', ')
-                      // groupState is watched at top level of _buildAppBar
+                      // Group: show member first-names from direct API fetch
+                      // Uses _groupMembersSubtitleProvider which calls
+                      // GET /group/members/:id directly — bypasses GroupViewModel
 
-                      final members = groupState?.members
-                              .where((m) => m.user.id.isNotEmpty &&
-                                  m.user.name.isNotEmpty)
-                              .toList() ??
-                          [];
-
-                      // Always show something — names if loaded, count otherwise
-                      if (members.isNotEmpty) {
-                        final names = members
-                            .map((m) => m.user.name.split(' ').first)
-                            .where((n) => n.isNotEmpty)
-                            .take(6)
-                            .join(', ');
-                        return Text(
-                          names,
-                          style: TextStyle(
-                              fontSize: 12, color: cc.secondaryText),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        );
+                      if (groupSubtitleAsync == null) {
+                        return const SizedBox.shrink();
                       }
 
-                      // Members not loaded yet — show count from group info
-                      final count = groupState?.group?.memberCount ?? 0;
-                      if (count > 0) {
-                        return Text(
-                          '$count members',
-                          style: TextStyle(
-                              fontSize: 12, color: cc.secondaryText),
-                        );
-                      }
-
-                      return const SizedBox.shrink();
+                      return groupSubtitleAsync.when(
+                        loading: () {
+                          // While loading: show a placeholder
+                          final count = groupState?.group?.memberCount ?? 0;
+                          return Text(
+                            count > 0 ? '$count members' : 'Loading members…',
+                            style: TextStyle(
+                                fontSize: 12, color: cc.secondaryText),
+                          );
+                        },
+                        error: (e, _) {
+                          debugPrint('[GroupSubtitle] widget error: $e');
+                          return const SizedBox.shrink();
+                        },
+                        data: (subtitle) {
+                          debugPrint('[GroupSubtitle] widget data="$subtitle"');
+                          if (subtitle.isEmpty) {
+                            final count = groupState?.group?.memberCount ?? 0;
+                            return Text(
+                              count > 0 ? '$count members' : '',
+                              style: TextStyle(
+                                  fontSize: 12, color: cc.secondaryText),
+                            );
+                          }
+                          return Text(
+                            subtitle,
+                            style: TextStyle(
+                                fontSize: 12, color: cc.secondaryText),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
+                      );
                     }
                   }),
                 ],
